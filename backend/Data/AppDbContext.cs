@@ -1,6 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 
-namespace GenerateCV.API.Data
+namespace backend.Data
 {
     public class AppDbContext : DbContext
     {

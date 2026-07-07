@@ -1,4 +1,4 @@
-namespace GenerateCV.API.Services
+namespace backend.Services
 {
     public class ScheduleService : IScheduleService
     {
@@ -15,7 +15,10 @@ namespace GenerateCV.API.Services
         {
             var schedule = new List<object>
             {
-                new { SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 2, SlotStart = 1, SlotEnd = 4 }
+                new { Id = "sch1", SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 2, SlotStart = 1, SlotEnd = 4, TeacherName = "ThS. Lê Hoàng Nam" },
+                new { Id = "sch3", SubjectName = "Lập trình Web nâng cao", ClassCode = "IT21A", Room = "B104", DayOfWeek = 3, SlotStart = 1, SlotEnd = 4, TeacherName = "ThS. Lê Hoàng Nam" },
+                new { Id = "sch6", SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 4, SlotStart = 5, SlotEnd = 8, TeacherName = "ThS. Lê Hoàng Nam" },
+                new { Id = "sch8", SubjectName = "Lập trình Web nâng cao", ClassCode = "IT21A", Room = "B104", DayOfWeek = 5, SlotStart = 5, SlotEnd = 8, TeacherName = "ThS. Lê Hoàng Nam" }
             };
             return Task.FromResult<IEnumerable<object>>(schedule);
         }
