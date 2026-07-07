@@ -1,20 +1,83 @@
+using System;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using backend.Data;
+using backend.Helpers;
+
 namespace backend.Services
 {
-    public class AuthService : IAuthService
+    public class AuthService(AppDbContext context, IConfiguration configuration) : IAuthService
     {
-        public Task<string?> LoginAsync(string username, string password)
+        public async Task<string?> LoginAsync(string username, string password)
         {
-            // Mock authentication token generation
-            if (username == "admin" || username == "sv_toan")
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
             {
-                return Task.FromResult<string?>("mock-jwt-token-xyz");
+                return null;
             }
-            return Task.FromResult<string?>(null);
+
+            var user = await context.Users
+                .FirstOrDefaultAsync(u => u.UserName.ToLower() == username.ToLower() && !u.IsDeleted);
+
+            if (user == null || !user.IsActived)
+            {
+                return null;
+            }
+
+            if (!PasswordHelper.VerifyPassword(password, user.PasswordHash, user.PasswordSalt))
+            {
+                return null;
+            }
+
+            // Generate JWT Token
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var jwtKey = configuration["Jwt:Key"] ?? "YOUR_VERY_SECRET_KEY_HERE_123456789";
+            var key = Encoding.UTF8.GetBytes(jwtKey);
+
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                    new Claim(ClaimTypes.Name, user.UserName),
+                    new Claim(ClaimTypes.Role, user.Role.ToString())
+                }),
+                Expires = DateTime.UtcNow.AddDays(7),
+                SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
+            };
+
+            var token = tokenHandler.CreateToken(tokenDescriptor);
+            return tokenHandler.WriteToken(token);
         }
 
-        public Task<object?> GetCurrentUserAsync(string userId)
+        public async Task<object?> GetCurrentUserAsync(string userId)
         {
-            return Task.FromResult<object?>(new { UserId = userId, Username = "admin", Role = 99 });
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return null;
+            }
+
+            var user = await context.Users
+                .FirstOrDefaultAsync(u => u.Id == userGuid && !u.IsDeleted);
+
+            if (user == null)
+            {
+                return null;
+            }
+
+            return new
+            {
+                UserId = user.Id.ToString(),
+                Username = user.UserName,
+                FullName = user.FullName,
+                Role = user.Role,
+                RoleName = RoleHelper.GetRoleName(user.Role),
+                UserInternalId = user.UserInternalId
+            };
         }
     }
 }
