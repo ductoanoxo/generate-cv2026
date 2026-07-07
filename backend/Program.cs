@@ -68,12 +68,29 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowAll");
 
-// Custom role verification middleware
+app.UseAuthentication();
+
+// Custom role verification middleware (must run after Authentication)
 app.UseMiddleware<RoleAuthorizationMiddleware>();
 
-app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Seed database on startup
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<AppDbContext>();
+        backend.Data.DbSeeder.Seed(context);
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "An error occurred seeding the DB.");
+    }
+}
 
 app.Run();
