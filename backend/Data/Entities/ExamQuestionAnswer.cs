@@ -1,0 +1,14 @@
+using System;
+using System.Collections.Generic;
+
+namespace backend.Data.Entities
+{
+    public class ExamQuestionAnswer
+    {
+        public Guid Id { get; set; }
+        public Guid ExamQuestionSelectionId { get; set; }
+        public string AnswerText { get; set; } = null!;
+        public bool IsAnswer { get; set; }
+        public virtual ExamQuestionSelection ExamQuestionSelection { get; set; } = null!;
+    }
+}

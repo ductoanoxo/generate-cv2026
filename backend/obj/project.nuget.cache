@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "QUAfL2suhzY=",
+  "dgSpecHash": "7zI8aj6fuCs=",
   "success": true,
-  "projectFilePath": "/home/traductoan/generate-cv/GenerateCV.API/GenerateCV.API.csproj",
+  "projectFilePath": "/home/traductoan/generate-cv/backend/backend.csproj",
   "expectedPackageFiles": [
     "/home/traductoan/.nuget/packages/humanizer.core/2.14.1/humanizer.core.2.14.1.nupkg.sha512",
     "/home/traductoan/.nuget/packages/microsoft.aspnetcore.authentication.jwtbearer/8.0.28/microsoft.aspnetcore.authentication.jwtbearer.8.0.28.nupkg.sha512",

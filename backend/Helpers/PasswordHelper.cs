@@ -1,7 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace GenerateCV.API.Helpers
+namespace backend.Helpers
 {
     public static class PasswordHelper
     {

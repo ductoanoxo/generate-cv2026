@@ -1,4 +1,4 @@
-namespace GenerateCV.API.Services
+namespace backend.Services
 {
     public interface ITeacherDashboardService
     {
