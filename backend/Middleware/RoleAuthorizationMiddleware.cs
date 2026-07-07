@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using System.Security.Claims;
 
-namespace GenerateCV.API.Middleware
+namespace backend.Middleware
 {
     public class RoleAuthorizationMiddleware
     {

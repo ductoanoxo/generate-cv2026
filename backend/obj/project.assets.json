@@ -2894,11 +2894,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/home/traductoan/generate-cv/GenerateCV.API/GenerateCV.API.csproj",
-      "projectName": "GenerateCV.API",
-      "projectPath": "/home/traductoan/generate-cv/GenerateCV.API/GenerateCV.API.csproj",
+      "projectUniqueName": "/home/traductoan/generate-cv/backend/backend.csproj",
+      "projectName": "backend",
+      "projectPath": "/home/traductoan/generate-cv/backend/backend.csproj",
       "packagesPath": "/home/traductoan/.nuget/packages/",
-      "outputPath": "/home/traductoan/generate-cv/GenerateCV.API/obj/",
+      "outputPath": "/home/traductoan/generate-cv/backend/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/home/traductoan/.nuget/NuGet/NuGet.Config"

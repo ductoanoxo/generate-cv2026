@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using GenerateCV.API.Services;
+using backend.Services;
 
-namespace GenerateCV.API.Controllers
+namespace backend.Controllers
 {
     [ApiController]
     [Route("api/teacher")]

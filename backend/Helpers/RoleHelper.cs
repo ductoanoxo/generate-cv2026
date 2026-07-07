@@ -1,4 +1,4 @@
-namespace GenerateCV.API.Helpers
+namespace backend.Helpers
 {
     public static class RoleHelper
     {
