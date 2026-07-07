@@ -37,3 +37,15 @@
   - `20`: Dept Head (Trưởng bộ môn)
   - `50`: Dean (Trưởng khoa)
   - `99`: Admin (Quản trị viên)
+
+## 3. Architecture & Coding Standard Rules (QUY TẮC KIẾN TRÚC & CODING)
+Luôn luôn tuân thủ các nguyên tắc và công nghệ sau trong quá trình phát triển Backend:
+- **EF Core DB First**: Phát triển dựa trên cấu trúc database sẵn có, không tự ý tự tạo migrations bằng code-first để thay đổi schema hiện tại ngoài ý muốn, đảm bảo mapping chính xác các database tables thành EF Core Entities.
+- **LINQ**: Sử dụng LINQ tối ưu hiệu năng (phân biệt Deferred Execution vs Immediate Execution), áp dụng các câu truy vấn hiệu quả, tối ưu hóa database queries (tránh N+1 query).
+- **Transactions**: Sử dụng transactions khi thực hiện các hoạt động ghi đồng thời hoặc nhiều bước cần tính toàn vẹn (ACID).
+- **Clean Architecture & Domain-Driven Design (DDD)**: Tuân thủ cấu trúc phân tầng Clean Architecture (Domain -> Application -> Infrastructure -> Presentation / API) và áp dụng các thiết kế DDD phù hợp (Entities, Value Objects, Aggregates, Repositories).
+- **CQRS & MediatR**: Tách biệt luồng xử lý Command (ghi) và Query (đọc) sử dụng pattern CQRS và thư viện MediatR để giữ cho mã nguồn tách biệt, dễ bảo trì và mở rộng.
+- **Domain Events**: Sử dụng Domain Events Dispatching để truyền đạt thông tin thay đổi trạng thái giữa các Bounded Contexts hoặc các Entity một cách lỏng lẻo (loose coupling).
+- **Dependency Injection (DI) / Keyed DI**: Đăng ký dịch vụ qua ASP.NET Core DI. Sử dụng Keyed DI (đối với .NET 8+) khi cần tiêm các triển khai khác nhau cho cùng một interface dựa trên định danh (Key).
+- **SOLID Principles**: Luôn tuân thủ nghiêm ngặt 5 nguyên tắc SOLID trong thiết kế hướng đối tượng để nâng cao tính tái sử dụng, dễ kiểm thử và bảo trì mã nguồn.
+
