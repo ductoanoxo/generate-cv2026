@@ -1,6 +1,6 @@
-# 🏫 Cổng Thông Tin Tây Đô (Tây Đô College Portal & CV Builder)
+# 📄 generateCV
 
-Dự án xây dựng cổng thông tin trực quan hóa dữ liệu (Dashboard) dành cho cán bộ quản lý, giảng viên và sinh viên Trường Cao Đẳng Tây Đô, tích hợp công cụ tự động tạo CV chuyên nghiệp dựa trên kết quả học tập thực tế.
+Dự án **generateCV** là hệ thống hỗ trợ quản lý và tự động tạo CV chuyên nghiệp cho sinh viên Trường Cao Đẳng Tây Đô dựa trên thông tin cá nhân và kết quả học tập thực tế. Trong đó, hệ thống cổng thông tin trực quan hóa dữ liệu (Dashboard) dành cho quản trị viên, trưởng khoa, trưởng bộ môn, giảng viên và sinh viên chỉ đóng vai trò là một phần tích hợp của hệ thống tổng thể này.
 
 ---
 
