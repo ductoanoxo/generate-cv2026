@@ -1,3 +1,0 @@
-﻿<Project>
-  <Import Project="../build/GenerateCV.API.props" />
-</Project>

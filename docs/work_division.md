@@ -7,7 +7,7 @@ Bản phân công này ánh xạ toàn bộ các chức năng, biểu đồ và 
 ## 📁 Cấu Trúc File & Quyền Sở Hữu
 
 ```
-GenerateCV.API/
+backend/
 ├── Controllers/
 │   ├── AuthController.cs                 ← Dev A (Đăng nhập bằng Users table, verify hash)
 │   ├── AdminDashboardController.cs       ← Dev A (KPIs, SV Khoa/Khóa, Điểm danh trend, AuditLogs, Settings, Devices)

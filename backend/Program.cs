@@ -85,6 +85,34 @@ using (var scope = app.Services.CreateScope())
     {
         var context = services.GetRequiredService<AppDbContext>();
         backend.Data.DbSeeder.Seed(context);
+
+        // Debug query to print SemesterPlans and AcademicYears
+        Console.WriteLine("========================================");
+        Console.WriteLine("DEBUG: SEMESTER PLANS & ACADEMIC YEARS:");
+        
+        var list = context.SemesterPlans
+            .Include(sp => sp.AcademicYear)
+            .Where(sp => !sp.IsDeleted)
+            .OrderBy(sp => sp.AcademicYear.Name)
+            .ThenBy(sp => sp.Semester)
+            .Select(sp => new
+            {
+                sp.Semester,
+                AcademicYearName = sp.AcademicYear.Name,
+                AcademicYearStart = sp.AcademicYear.StartDate,
+                AcademicYearEnd = sp.AcademicYear.EndDate,
+                SemesterStart = sp.StartDate,
+                SemesterEnd = sp.EndDate,
+                sp.IsActive
+            })
+            .Distinct()
+            .ToList();
+
+        foreach (var item in list)
+        {
+            Console.WriteLine($"- AcademicYear: {item.AcademicYearName} (Dates: {item.AcademicYearStart:yyyy-MM-dd} to {item.AcademicYearEnd:yyyy-MM-dd}) | Semester: {item.Semester} (Dates: {item.SemesterStart:yyyy-MM-dd} to {item.SemesterEnd:yyyy-MM-dd})");
+        }
+        Console.WriteLine("========================================");
     }
     catch (Exception ex)
     {
