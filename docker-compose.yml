@@ -8,6 +8,7 @@ services:
       - "5000:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=${DATABASE_URL}
     volumes:
       - ./backend:/app
       - /app/bin
@@ -22,6 +23,9 @@ services:
     container_name: taydo_frontend
     ports:
       - "3000:5173"
+    environment:
+      - VITE_SUPABASE_URL=${VITE_SUPABASE_URL}
+      - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY}
     volumes:
       - ./frontend:/app
       - /app/node_modules

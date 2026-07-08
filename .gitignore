@@ -36,3 +36,12 @@ lerna-debug.log*
 .codegraph/
 .agents/logs/
 *.http
+
+# --- Environment & Key Files ---
+.env
+.env.*
+!.env.example
+
+# --- Temporary files ---
+zztmp.cs
+*.tmp

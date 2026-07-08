@@ -103,21 +103,35 @@ docker compose logs -f
 docker compose down
 ```
 
+### ⚙️ Cấu hình Biến Môi Trường (.env)
+
+Hệ thống hiện tại hỗ trợ cấu hình kết nối database thông qua file `.env` ở thư mục gốc của dự án. 
+
+1. Sao chép file `.env.example` thành `.env`:
+   ```bash
+   cp .env.example .env
+   ```
+2. Cập nhật các thông số kết nối trong file `.env`:
+   - `DATABASE_URL`: Chuỗi kết nối PostgreSQL đến Supabase (dành cho Backend).
+   - `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`: Địa chỉ URL và mã Anon Key của Supabase (dành cho Frontend).
+
 ### Cách 2: Khởi chạy thủ công (Local Development)
 
 #### 1. Chạy Backend .NET 8:
 Yêu cầu đã cài đặt .NET 8 SDK.
 ```bash
 cd backend
-# Cấu hình lại mật khẩu Supabase PostgreSQL trong appsettings.json nếu cần
+# Chuỗi kết nối mặc định được đọc từ file appsettings.json nếu chạy trực tiếp.
+# Nếu chạy qua Docker, chuỗi kết nối sẽ được ghi đè bằng biến DATABASE_URL trong file .env.
 dotnet run
 ```
-API sẽ hoạt động tại `http://localhost:5080` (hoặc cổng cấu hình ngẫu nhiên).
+API sẽ hoạt động tại `http://localhost:5000` (hoặc cổng cấu hình trong launchSettings.json).
 
 #### 2. Chạy Frontend React:
-Yêu cầu đã cài đặt Node.js (phiên bản v24 trở lên).
+Yêu cầu đã cài đặt Node.js (phiên bản v18 trở lên).
 ```bash
 cd frontend
+# Tạo file .env tương tự như ở thư mục gốc nếu muốn chạy local không qua Docker
 npm install
 npm run dev
 ```

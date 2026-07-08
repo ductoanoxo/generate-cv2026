@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using backend.Services;
+using System;
+using System.Threading.Tasks;
 
 namespace backend.Controllers
 {
@@ -22,10 +24,17 @@ namespace backend.Controllers
         }
 
         [HttpGet("teacher/{id}")]
-        public async Task<IActionResult> GetTeacherSchedule(string id)
+        public async Task<IActionResult> GetTeacherSchedule(string id, [FromQuery] Guid? semesterId)
         {
-            var schedule = await _scheduleService.GetScheduleByTeacherAsync(id);
+            var schedule = await _scheduleService.GetScheduleByTeacherAsync(id, semesterId);
             return Ok(schedule);
+        }
+
+        [HttpGet("semesters")]
+        public async Task<IActionResult> GetSemesters()
+        {
+            var semesters = await _scheduleService.GetSemestersAsync();
+            return Ok(semesters);
         }
     }
 }
