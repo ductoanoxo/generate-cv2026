@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { GraduationCap, SignIn } from '@phosphor-icons/react';
-import { mockUsers } from '../mock/mockData';
 
 export const Login: React.FC = () => {
   const [username, setUsername] = useState<string>('');
+  const [password, setPassword] = useState<string>('');
   const [error, setError] = useState<string>('');
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -19,11 +19,11 @@ export const Login: React.FC = () => {
       return;
     }
 
-    const success = await login(username);
+    const success = await login(username, password);
     if (success) {
-      // Find what role this user is and redirect accordingly
-      const user = mockUsers.find(u => u.username === username.trim().toLowerCase());
-      if (user) {
+      const storedUserStr = localStorage.getItem('taydo_user');
+      if (storedUserStr) {
+        const user = JSON.parse(storedUserStr);
         switch (user.role) {
           case 99:
             navigate('/admin');
@@ -46,12 +46,40 @@ export const Login: React.FC = () => {
         }
       }
     } else {
-      setError('Tên đăng nhập không đúng hoặc không tồn tại.');
+      setError('Tên đăng nhập hoặc mật khẩu không đúng.');
     }
   };
 
-  const handleSelectMockUser = (userStr: string) => {
+  const handleSelectDemoUser = (userStr: string, passStr: string) => {
     setUsername(userStr);
+    setPassword(passStr);
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    alignItems: 'flex-start',
+    background: 'rgba(255, 255, 255, 0.03)',
+    border: '1px solid var(--color-border)',
+    color: 'var(--color-foreground)',
+    padding: '8px 12px',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontSize: '0.8rem',
+    transition: 'all 150ms ease',
+    textAlign: 'left',
+    width: '100%'
+  };
+
+  const handleMouseOver = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.borderColor = '#22C55E';
+    e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)';
+  };
+
+  const handleMouseOut = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.currentTarget.style.borderColor = 'var(--color-border)';
+    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
   };
 
   return (
@@ -74,21 +102,21 @@ export const Login: React.FC = () => {
               type="text"
               id="username"
               className="input-field"
-              placeholder="Nhập tên đăng nhập (ví dụ: admin, sv_toan)"
+              placeholder="Nhập tên đăng nhập (ví dụ: admin1, sinhvien1)"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
             />
           </div>
 
           <div className="form-group">
-            <label htmlFor="password">Mật khẩu (Chỉ xem - Không yêu cầu)</label>
+            <label htmlFor="password">Mật khẩu</label>
             <input
               type="password"
               id="password"
               className="input-field"
-              placeholder="••••••••"
-              disabled
-              value="********"
+              placeholder="Nhập mật khẩu (ví dụ: password123)"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
             />
           </div>
 
@@ -104,42 +132,93 @@ export const Login: React.FC = () => {
           </button>
         </form>
 
-        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px' }}>
+        <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px', marginTop: '16px' }}>
           <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Tài khoản dùng thử nhanh:
+            Tài khoản chạy thật (Database Supabase - MK: password123):
           </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-            {mockUsers.map((user) => (
-              <button
-                key={user.id}
-                type="button"
-                onClick={() => handleSelectMockUser(user.username)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  background: 'rgba(255, 255, 255, 0.03)',
-                  border: '1px solid var(--color-border)',
-                  color: 'var(--color-foreground)',
-                  padding: '8px 12px',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '0.8rem',
-                  transition: 'all 150ms ease',
-                  textAlign: 'left'
-                }}
-                onMouseOver={(e) => { e.currentTarget.style.borderColor = '#22C55E'; e.currentTarget.style.background = 'rgba(34, 197, 94, 0.05)'; }}
-                onMouseOut={(e) => { e.currentTarget.style.borderColor = 'var(--color-border)'; e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)'; }}
-              >
-                <div>
-                  <span style={{ fontWeight: 700, color: '#22C55E' }}>{user.username}</span>
-                  <span style={{ color: '#94A3B8', marginLeft: '8px' }}>({user.fullName})</span>
-                </div>
-                <span className="user-badge" style={{ fontSize: '0.65rem', padding: '2px 6px' }}>
-                  Role {user.role}
-                </span>
-              </button>
-            ))}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px' }}>
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('admin1', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>admin1</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Admin)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('giaovien1', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien1</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Dean)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('giaovien2', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien2</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Teacher)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('sinhvien1', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>sinhvien1</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student)</span>
+              </div>
+            </button>
+          </div>
+
+          <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+            Tài khoản mẫu (Local database seeder):
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('admin', 'admin')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>admin</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Admin)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('sv_toan', 'sv_toan')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>sv_toan</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student)</span>
+              </div>
+            </button>
           </div>
         </div>
       </div>
