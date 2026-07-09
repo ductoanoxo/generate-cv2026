@@ -182,10 +182,48 @@ namespace backend.Services
             return sorted.Cast<object>();
         }
 
-        public Task<IEnumerable<object>> GetScheduleByFacultyAsync(string facultyId)
+        public async Task<IEnumerable<object>> GetScheduleByFacultyAsync(string facultyId)
         {
-            var schedule = new List<object>();
-            return Task.FromResult<IEnumerable<object>>(schedule);
+            if (!Guid.TryParse(facultyId, out var facultyGuid))
+            {
+                return Enumerable.Empty<object>();
+            }
+
+            var activeSemesters = await _context.SemesterPlans
+                .Where(sp => sp.IsActive && !sp.IsDeleted)
+                .ToListAsync();
+
+            var query = _context.SubjectSchedules
+                .Include(ss => ss.SubjectTeaching)
+                    .ThenInclude(st => st.Subject)
+                .Include(ss => ss.Room)
+                .Include(ss => ss.Teacher)
+                    .ThenInclude(t => t!.User)
+                .Where(ss => ss.SubjectTeaching.Subject.FacultyId == facultyGuid && !ss.IsDeleted && !ss.SubjectTeaching.IsDeleted && !ss.SubjectTeaching.Subject.IsDeleted);
+
+            if (activeSemesters.Any())
+            {
+                var startLimit = DateTime.SpecifyKind(activeSemesters.Min(sp => sp.StartDate), DateTimeKind.Utc);
+                var endLimit = DateTime.SpecifyKind(activeSemesters.Max(sp => sp.EndDate), DateTimeKind.Utc);
+                query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
+            }
+
+            var schedules = await query
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
         }
 
         public async Task<IEnumerable<object>> GetScheduleTodayAsync(string userId, int role, DateTime? date = null)

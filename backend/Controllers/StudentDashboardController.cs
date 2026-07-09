@@ -38,5 +38,12 @@ namespace backend.Controllers
             var ann = await _studentService.GetStudentAnnouncementsAsync(studentId);
             return Ok(ann);
         }
+
+        [HttpGet("exams")]
+        public async Task<IActionResult> GetExams([FromQuery] string studentId)
+        {
+            var exams = await _studentService.GetStudentExamResultsAsync(studentId);
+            return Ok(exams);
+        }
     }
 }

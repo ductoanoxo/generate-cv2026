@@ -6,5 +6,6 @@ namespace backend.Services
         Task<IEnumerable<object>> GetAuditLogsAsync(int limit);
         Task<object> GetDeviceDistributionAsync();
         Task<object> GetSettingsAsync();
+        Task<IEnumerable<object>> GetUserDevicesListAsync(int limit);
     }
 }

@@ -69,11 +69,11 @@ namespace backend.Controllers
             return Ok(schedule);
         }
 
-        [HttpGet("semesters")]
-        public async Task<IActionResult> GetSemesters()
+        [HttpGet("faculty/{id}")]
+        public async Task<IActionResult> GetFacultySchedule(string id)
         {
-            var semesters = await _scheduleService.GetSemestersAsync();
-            return Ok(semesters);
+            var schedule = await _scheduleService.GetScheduleByFacultyAsync(id);
+            return Ok(schedule);
         }
     }
 }

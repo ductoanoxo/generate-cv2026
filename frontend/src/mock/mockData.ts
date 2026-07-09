@@ -250,7 +250,8 @@ export const adminStats = {
     students: 577,
     teachers: 67,
     faculties: 9,
-    subjects: 390
+    subjects: 390,
+    majors: 24
   },
   studentsByFaculty: [
     { name: 'Công nghệ Thông tin', count: 180 },
@@ -259,10 +260,32 @@ export const adminStats = {
     { name: 'Nông nghiệp & Sinh học', count: 62 },
     { name: 'Ngoại ngữ', count: 100 }
   ],
+  studentsByFacultyAndMajor: [
+    { faculty: 'Công nghệ Thông tin', major: 'Kỹ thuật Phần mềm', count: 80 },
+    { faculty: 'Công nghệ Thông tin', major: 'Khoa học Máy tính', count: 60 },
+    { faculty: 'Công nghệ Thông tin', major: 'An toàn Thông tin', count: 40 },
+    { faculty: 'Kinh tế & Quản trị', major: 'Quản trị Kinh doanh', count: 70 },
+    { faculty: 'Kinh tế & Quản trị', major: 'Tài chính Ngân hàng', count: 50 },
+    { faculty: 'Kinh tế & Quản trị', major: 'Kế toán', count: 20 },
+    { faculty: 'Kỹ thuật - Công nghệ', major: 'Công nghệ Kỹ thuật Ô tô', count: 55 },
+    { faculty: 'Kỹ thuật - Công nghệ', major: 'Kỹ thuật Điện', count: 40 },
+    { faculty: 'Nông nghiệp & Sinh học', major: 'Nông nghiệp Công nghệ cao', count: 35 },
+    { faculty: 'Nông nghiệp & Sinh học', major: 'Công nghệ Thực phẩm', count: 27 },
+    { faculty: 'Ngoại ngữ', major: 'Ngôn ngữ Anh', count: 60 },
+    { faculty: 'Ngoại ngữ', major: 'Ngôn ngữ Trung', count: 40 }
+  ],
   studentsByYear: [
     { year: 'K19 (2022-2025)', count: 175 },
     { year: 'K20 (2023-2026)', count: 198 },
     { year: 'K21 (2024-2027)', count: 204 }
+  ],
+  studentsByYearAndGender: [
+    { year: 'K19 (2022-2025)', gender: 'Nam', count: 95 },
+    { year: 'K19 (2022-2025)', gender: 'Nữ', count: 80 },
+    { year: 'K20 (2023-2026)', gender: 'Nam', count: 108 },
+    { year: 'K20 (2023-2026)', gender: 'Nữ', count: 90 },
+    { year: 'K21 (2024-2027)', gender: 'Nam', count: 114 },
+    { year: 'K21 (2024-2027)', gender: 'Nữ', count: 90 }
   ],
   attendanceTrend: [
     { month: 'T10/2025', present: 94, late: 2, excused: 1, unexcused: 3 },
@@ -287,8 +310,15 @@ export const adminStats = {
     { name: 'Khá (6.5-8)', value: 9800 },
     { name: 'Giỏi (8+)', value: 4179 }
   ],
+  examResultsByFaculty: [
+    { faculty: 'Công nghệ Thông tin', kem: 5, yeu: 10, tb: 35, kha: 38, gioi: 12, avg: 7.2 },
+    { faculty: 'Kinh tế & Quản trị', kem: 4, yeu: 12, tb: 42, kha: 32, gioi: 10, avg: 6.9 },
+    { faculty: 'Kỹ thuật - Công nghệ', kem: 8, yeu: 15, tb: 38, kha: 30, gioi: 9, avg: 6.7 },
+    { faculty: 'Nông nghiệp & Sinh học', kem: 3, yeu: 8, tb: 45, kha: 34, gioi: 10, avg: 7.0 },
+    { faculty: 'Ngoại ngữ', kem: 2, yeu: 6, tb: 30, kha: 45, gioi: 17, avg: 7.5 }
+  ],
   devicesDistribution: [
-    { name: 'Desktop', value: 450, color: '#0F172A' },
+    { name: 'Desktop', value: 450, color: '#64748B' },
     { name: 'Mobile', value: 180, color: '#22C55E' },
     { name: 'Tablet', value: 35, color: '#3B82F6' }
   ]
