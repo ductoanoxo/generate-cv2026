@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 
 namespace backend.Controllers
-namespace backend.Controllers
 {
     [ApiController]
     [Route("api/teacher")]
