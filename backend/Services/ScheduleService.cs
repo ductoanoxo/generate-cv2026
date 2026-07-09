@@ -1,37 +1,5 @@
-// namespace backend.Services
-// {
-//     public class ScheduleService : IScheduleService
-//     {
-//         public Task<IEnumerable<object>> GetScheduleByStudentAsync(string studentId)
-//         {
-//             var schedule = new List<object>
-//             {
-//                 new { SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 2, SlotStart = 1, SlotEnd = 4 }
-//             };
-//             return Task.FromResult<IEnumerable<object>>(schedule);
-//         }
-
-//         public Task<IEnumerable<object>> GetScheduleByTeacherAsync(string teacherId)
-//         {
-//             var schedule = new List<object>
-//             {
-//                 new { Id = "sch1", SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 2, SlotStart = 1, SlotEnd = 4, TeacherName = "ThS. Lê Hoàng Nam" },
-//                 new { Id = "sch3", SubjectName = "Lập trình Web nâng cao", ClassCode = "IT21A", Room = "B104", DayOfWeek = 3, SlotStart = 1, SlotEnd = 4, TeacherName = "ThS. Lê Hoàng Nam" },
-//                 new { Id = "sch6", SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 4, SlotStart = 5, SlotEnd = 8, TeacherName = "ThS. Lê Hoàng Nam" },
-//                 new { Id = "sch8", SubjectName = "Lập trình Web nâng cao", ClassCode = "IT21A", Room = "B104", DayOfWeek = 5, SlotStart = 5, SlotEnd = 8, TeacherName = "ThS. Lê Hoàng Nam" }
-//             };
-//             return Task.FromResult<IEnumerable<object>>(schedule);
-//         }
-
-//         public Task<IEnumerable<object>> GetScheduleByFacultyAsync(string facultyId)
-//         {
-//             var schedule = new List<object>();
-//             return Task.FromResult<IEnumerable<object>>(schedule);
-//         }
-//     }
-// }
-
 using backend.Data;
+using backend.Data.Entities;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -49,20 +17,40 @@ namespace backend.Services
             _context = context;
         }
 
-        public Task<IEnumerable<object>> GetScheduleByStudentAsync(string studentId)
+        private async Task<IQueryable<SubjectSchedule>> GetStudentScheduleQueryAsync(string studentId)
         {
-            var schedule = new List<object>
+            if (!Guid.TryParse(studentId, out var studentGuid))
             {
-                new { SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 2, SlotStart = 1, SlotEnd = 4 }
-            };
-            return Task.FromResult<IEnumerable<object>>(schedule);
+                return Enumerable.Empty<SubjectSchedule>().AsQueryable();
+            }
+
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => s.Id == studentGuid || s.UserId == studentGuid);
+
+            if (student == null)
+            {
+                return Enumerable.Empty<SubjectSchedule>().AsQueryable();
+            }
+
+            var teachingIds = await _context.SubjectStudents
+                .Where(ss => ss.StudentId == student.Id)
+                .Select(ss => ss.SubjectTeachingId)
+                .ToListAsync();
+
+            return _context.SubjectSchedules
+                .Include(ss => ss.SubjectTeaching)
+                    .ThenInclude(st => st.Subject)
+                .Include(ss => ss.Room)
+                .Include(ss => ss.Teacher)
+                    .ThenInclude(t => t!.User)
+                .Where(ss => teachingIds.Contains(ss.SubjectTeachingId) && !ss.IsDeleted);
         }
 
-        public async Task<IEnumerable<object>> GetScheduleByTeacherAsync(string teacherId, Guid? semesterId = null)
+        private async Task<IQueryable<SubjectSchedule>> GetTeacherScheduleQueryAsync(string teacherId)
         {
             if (!Guid.TryParse(teacherId, out var teacherGuid))
             {
-                return Enumerable.Empty<object>();
+                return Enumerable.Empty<SubjectSchedule>().AsQueryable();
             }
 
             var teacherFacultyIds = await _context.TeacherFaculties
@@ -70,13 +58,51 @@ namespace backend.Services
                 .Select(tf => tf.Id)
                 .ToListAsync();
 
-            var query = _context.SubjectSchedules
+            return _context.SubjectSchedules
                 .Include(ss => ss.SubjectTeaching)
                     .ThenInclude(st => st.Subject)
                 .Include(ss => ss.Room)
                 .Include(ss => ss.Teacher)
                     .ThenInclude(t => t!.User)
                 .Where(ss => ss.TeacherId != null && teacherFacultyIds.Contains(ss.TeacherId.Value) && !ss.IsDeleted);
+        }
+
+        public async Task<IEnumerable<object>> GetScheduleByStudentAsync(string studentId)
+        {
+            var query = await GetStudentScheduleQueryAsync(studentId);
+
+            var activeSemesters = await _context.SemesterPlans
+                .Where(sp => sp.IsActive && !sp.IsDeleted)
+                .ToListAsync();
+
+            if (activeSemesters.Any())
+            {
+                var startLimit = DateTime.SpecifyKind(activeSemesters.Min(sp => sp.StartDate), DateTimeKind.Utc);
+                var endLimit = DateTime.SpecifyKind(activeSemesters.Max(sp => sp.EndDate), DateTimeKind.Utc);
+                query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
+            }
+
+            var schedules = await query
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
+        }
+
+        public async Task<IEnumerable<object>> GetScheduleByTeacherAsync(string teacherId, Guid? semesterId = null)
+        {
+            var query = await GetTeacherScheduleQueryAsync(teacherId);
 
             if (semesterId.HasValue)
             {
@@ -160,6 +186,68 @@ namespace backend.Services
         {
             var schedule = new List<object>();
             return Task.FromResult<IEnumerable<object>>(schedule);
+        }
+
+        public async Task<IEnumerable<object>> GetScheduleTodayAsync(string userId, int role, DateTime? date = null)
+        {
+            var targetDate = (date ?? DateTime.Today).Date;
+            var query = role == 1 
+                ? await GetStudentScheduleQueryAsync(userId) 
+                : await GetTeacherScheduleQueryAsync(userId);
+
+            var startOfDay = DateTime.SpecifyKind(targetDate, DateTimeKind.Utc);
+            var endOfDay = DateTime.SpecifyKind(targetDate.AddDays(1), DateTimeKind.Utc);
+
+            var schedules = await query
+                .Where(ss => ss.StartDateTime >= startOfDay && ss.StartDateTime < endOfDay)
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
+        }
+
+        public async Task<IEnumerable<object>> GetScheduleByWeekAsync(string userId, int role, DateTime? date = null)
+        {
+            var targetDate = date ?? DateTime.Today;
+            int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+            var monday = targetDate.AddDays(-1 * diff).Date;
+            var sunday = monday.AddDays(7).Date;
+
+            var startOfWeek = DateTime.SpecifyKind(monday, DateTimeKind.Utc);
+            var endOfWeek = DateTime.SpecifyKind(sunday, DateTimeKind.Utc);
+
+            var query = role == 1 
+                ? await GetStudentScheduleQueryAsync(userId) 
+                : await GetTeacherScheduleQueryAsync(userId);
+
+            var schedules = await query
+                .Where(ss => ss.StartDateTime >= startOfWeek && ss.StartDateTime < endOfWeek)
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
         }
 
         private static int GetSlotFromTime(TimeSpan time)

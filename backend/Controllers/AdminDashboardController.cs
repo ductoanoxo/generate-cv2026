@@ -34,5 +34,12 @@ namespace backend.Controllers
             var devices = await _dashboardService.GetDeviceDistributionAsync();
             return Ok(devices);
         }
+
+        [HttpGet("settings")]
+        public async Task<IActionResult> GetSettings()
+        {
+            var settings = await _dashboardService.GetSettingsAsync();
+            return Ok(settings);
+        }
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using backend.Services;
+using System.Threading.Tasks;
 
 namespace backend.Controllers
 {
@@ -26,6 +27,13 @@ namespace backend.Controllers
         {
             var progress = await _deptService.GetTeachingProgressAsync(departmentId);
             return Ok(progress);
+        }
+
+        [HttpGet("questions")]
+        public async Task<IActionResult> GetQuestions([FromQuery] string departmentId)
+        {
+            var questions = await _deptService.GetQuestionSuitesAsync(departmentId);
+            return Ok(questions);
         }
     }
 }

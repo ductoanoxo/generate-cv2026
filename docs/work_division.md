@@ -110,12 +110,12 @@ Week 2 — Admin Dashboard APIs (Task A8 -> A11):
   ☐ A11. Viết ScheduleService & ScheduleController: GET /api/schedule/today, /by-week.
 
 Week 3 — Faculty & Dept Dashboards (Task A12 -> A17):
-  ☐ A12. Viết FacultyDashboardService truy vấn KPIs khoa, danh sách GV khoa, điểm danh HP.
-  ☐ A13. Viết FacultyDashboardController: GET /api/faculty/dashboard.
-  ☐ A14. Viết DepartmentDashboardService truy vấn KPIs bộ môn, ngân hàng đề thi.
-  ☐ A15. Viết DepartmentDashboardController: GET /api/department/dashboard.
-  ☐ A16. Tối ưu hóa SQL query (Index, Eager loading) tránh N+1 query khi hiển thị dashboard.
-  ☐ A17. Bàn giao Swagger API Docs cuối cùng.
+  ☑ A12. Viết FacultyDashboardService truy vấn KPIs khoa, danh sách GV khoa, điểm danh HP.
+  ☑ A13. Viết FacultyDashboardController: GET /api/faculty/dashboard.
+  ☑ A14. Viết DepartmentDashboardService truy vấn KPIs bộ môn, ngân hàng đề thi.
+  ☑ A15. Viết DepartmentDashboardController: GET /api/department/dashboard.
+  ☑ A16. Tối ưu hóa SQL query (Index, Eager loading) tránh N+1 query khi hiển thị dashboard.
+  ☑ A17. Bàn giao Swagger API Docs cuối cùng.
 ```
 
 ---
