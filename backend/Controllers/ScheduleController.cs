@@ -69,11 +69,5 @@ namespace backend.Controllers
             return Ok(schedule);
         }
 
-        [HttpGet("semesters")]
-        public async Task<IActionResult> GetSemesters()
-        {
-            var semesters = await _scheduleService.GetSemestersAsync();
-            return Ok(semesters);
-        }
     }
 }
