@@ -152,6 +152,45 @@ export const Login: React.FC = () => {
 
             <button
               type="button"
+              onClick={() => handleSelectDemoUser('deankhoa', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>deankhoa</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Dean - Khoa)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('tbm_cntt', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>tbm_cntt</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(TBM - Bộ môn)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleSelectDemoUser('sv_toan', 'password123')}
+              style={buttonStyle}
+              onMouseOver={handleMouseOver}
+              onMouseOut={handleMouseOut}
+            >
+              <div>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>sv_toan</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student)</span>
+              </div>
+            </button>
+
+            <button
+              type="button"
               onClick={() => handleSelectDemoUser('giaovien1', 'password123')}
               style={buttonStyle}
               onMouseOver={handleMouseOver}
@@ -159,7 +198,7 @@ export const Login: React.FC = () => {
             >
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien1</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Dean)</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Dean DB)</span>
               </div>
             </button>
 
@@ -172,7 +211,7 @@ export const Login: React.FC = () => {
             >
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien2</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Teacher)</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Teacher DB)</span>
               </div>
             </button>
 
@@ -185,7 +224,7 @@ export const Login: React.FC = () => {
             >
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>sinhvien1</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student)</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student DB)</span>
               </div>
             </button>
           </div>
@@ -204,19 +243,6 @@ export const Login: React.FC = () => {
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>admin</span>
                 <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Admin)</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectDemoUser('sv_toan', 'sv_toan')}
-              style={buttonStyle}
-              onMouseOver={handleMouseOver}
-              onMouseOut={handleMouseOut}
-            >
-              <div>
-                <span style={{ fontWeight: 700, color: '#22C55E' }}>sv_toan</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student)</span>
               </div>
             </button>
           </div>
