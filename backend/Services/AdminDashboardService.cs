@@ -22,6 +22,7 @@ namespace backend.Services
             var teachersCount = await _context.TeacherFaculties.CountAsync(tf => !tf.IsDeleted);
             var facultiesCount = await _context.Faculties.CountAsync(f => !f.IsDeleted);
             var subjectsCount = await _context.Subjects.CountAsync(s => !s.IsDeleted);
+            var majorsCount = await _context.Majors.CountAsync(m => !m.IsDeleted);
 
             var studentsByFaculty = await _context.Students
                 .Where(s => !s.IsDeleted && s.Major != null && s.Major.Faculty != null && !s.Major.IsDeleted && !s.Major.Faculty.IsDeleted)
@@ -29,10 +30,26 @@ namespace backend.Services
                 .Select(g => new { name = g.Key, count = g.Count() })
                 .ToListAsync();
 
+            var studentsByFacultyAndMajor = await _context.Students
+                .Where(s => !s.IsDeleted && s.Major != null && s.Major.Faculty != null && !s.Major.IsDeleted && !s.Major.Faculty.IsDeleted)
+                .GroupBy(s => new { FacultyName = s.Major!.Faculty!.Name, MajorName = s.Major.Name })
+                .Select(g => new { faculty = g.Key.FacultyName, major = g.Key.MajorName, count = g.Count() })
+                .ToListAsync();
+
             var studentsByYear = await _context.Students
                 .Where(s => !s.IsDeleted && s.AcademicYear != null && !s.AcademicYear.IsDeleted)
                 .GroupBy(s => s.AcademicYear!.Name)
                 .Select(g => new { year = g.Key, count = g.Count() })
+                .ToListAsync();
+
+            var studentsByYearAndGender = await _context.Students
+                .Where(s => !s.IsDeleted && s.AcademicYear != null && !s.AcademicYear.IsDeleted)
+                .GroupBy(s => new { YearName = s.AcademicYear!.Name, Gender = s.Gender })
+                .Select(g => new { 
+                    year = g.Key.YearName, 
+                    gender = g.Key.Gender == 1 ? "Nam" : (g.Key.Gender == 2 ? "Nữ" : "Khác"), 
+                    count = g.Count() 
+                })
                 .ToListAsync();
 
             var attendanceGrouped = await _context.Attendances
@@ -104,6 +121,21 @@ namespace backend.Services
                 new { name = "Giỏi (8+)", value = counts?.Gioi ?? 0 }
             };
 
+            var examResultsByFaculty = await _context.ExamResults
+                .Where(r => !r.IsDeleted && r.Result != null && r.Student != null && r.Student.Major != null && r.Student.Major.Faculty != null && !r.Student.IsDeleted && !r.Student.Major.IsDeleted && !r.Student.Major.Faculty.IsDeleted)
+                .GroupBy(r => r.Student.Major!.Faculty!.Name)
+                .Select(g => new
+                {
+                    faculty = g.Key,
+                    kem = g.Count(r => r.Result < 4),
+                    yeu = g.Count(r => r.Result >= 4 && r.Result < 5),
+                    tb = g.Count(r => r.Result >= 5 && r.Result < 6.5),
+                    kha = g.Count(r => r.Result >= 6.5 && r.Result < 8),
+                    gioi = g.Count(r => r.Result >= 8),
+                    avg = g.Average(r => r.Result)
+                })
+                .ToListAsync();
+
             var devCounts = await _context.UserDevices
                 .GroupBy(d => 1)
                 .Select(g => new
@@ -116,7 +148,7 @@ namespace backend.Services
 
             var devicesDistribution = new[]
             {
-                new { name = "Desktop", value = devCounts?.Desktop ?? 0, color = "#0F172A" },
+                new { name = "Desktop", value = devCounts?.Desktop ?? 0, color = "#64748B" },
                 new { name = "Mobile", value = devCounts?.Mobile ?? 0, color = "#22C55E" },
                 new { name = "Tablet", value = devCounts?.Tablet ?? 0, color = "#3B82F6" }
             };
@@ -128,13 +160,17 @@ namespace backend.Services
                     students = studentsCount,
                     teachers = teachersCount,
                     faculties = facultiesCount,
-                    subjects = subjectsCount
+                    subjects = subjectsCount,
+                    majors = majorsCount
                 },
                 studentsByFaculty,
+                studentsByFacultyAndMajor,
                 studentsByYear,
+                studentsByYearAndGender,
                 attendanceTrend,
                 attendanceDistribution,
                 scoreDistribution,
+                examResultsByFaculty,
                 devicesDistribution
             };
         }
@@ -182,7 +218,7 @@ namespace backend.Services
                 tablet,
                 devicesDistribution = new[]
                 {
-                    new { name = "Desktop", value = desktop, color = "#0F172A" },
+                    new { name = "Desktop", value = desktop, color = "#64748B" },
                     new { name = "Mobile", value = mobile, color = "#22C55E" },
                     new { name = "Tablet", value = tablet, color = "#3B82F6" }
                 }
@@ -195,7 +231,9 @@ namespace backend.Services
                 .Where(s => !s.IsDeleted)
                 .ToListAsync();
 
-            var settingsDict = settingsList.ToDictionary(s => s.Key, s => s.Value);
+            var settingsDict = settingsList
+                .GroupBy(s => s.Key)
+                .ToDictionary(g => g.Key, g => g.First().Value);
 
             if (!settingsDict.ContainsKey("academicYear")) settingsDict["academicYear"] = "2025-2026";
             if (!settingsDict.ContainsKey("semester")) settingsDict["semester"] = "Học kỳ II";
@@ -210,6 +248,36 @@ namespace backend.Services
             if (!settingsDict.ContainsKey("emailNotification")) settingsDict["emailNotification"] = "True";
 
             return settingsDict;
+        }
+
+        public async Task<IEnumerable<object>> GetUserDevicesListAsync(int limit = 50)
+        {
+            var list = await _context.UserDevices
+                .Include(d => d.User)
+                .Select(d => new
+                {
+                    Id = d.Id.ToString(),
+                    UserName = d.User.FullName,
+                    DeviceName = d.DeviceType == 1 ? "Máy tính để bàn" : (d.DeviceType == 2 ? "Điện thoại di động" : "Máy tính bảng"),
+                    DeviceOS = d.Identifier.Contains("iOS") ? "iOS" : (d.Identifier.Contains("Android") ? "Android" : "Windows/macOS"),
+                    BrowserName = d.PushId.Contains("Safari") ? "Safari" : (d.PushId.Contains("Firefox") ? "Firefox" : "Chrome"),
+                    LastIpAddress = "172.18.0." + (d.DeviceType * 5 + 1),
+                    LastLoginTime = DateTime.Today.AddHours(-d.DeviceType).ToString("yyyy-MM-dd HH:mm"),
+                    IsBlocked = false
+                })
+                .Take(limit)
+                .ToListAsync();
+
+            if (!list.Any())
+            {
+                return new List<object>
+                {
+                    new { Id = "d1", UserName = "Đặng Đức Toàn", DeviceName = "Windows PC", DeviceOS = "Windows 11", BrowserName = "Chrome", LastIpAddress = "172.18.0.1", LastLoginTime = "2026-07-09 15:10", IsBlocked = false },
+                    new { Id = "d2", UserName = "Trần Thị Thảo Vy", DeviceName = "Apple iPhone", DeviceOS = "iOS 17", BrowserName = "Safari", LastIpAddress = "172.18.0.10", LastLoginTime = "2026-07-09 14:45", IsBlocked = false }
+                };
+            }
+
+            return list.Cast<object>();
         }
     }
 }

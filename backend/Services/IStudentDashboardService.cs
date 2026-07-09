@@ -5,5 +5,6 @@ namespace backend.Services
         Task<object?> GetStudentProfileAsync(string studentId);
         Task<object> GetStudentStatsAsync(string studentId);
         Task<IEnumerable<object>> GetStudentAnnouncementsAsync(string studentId);
+        Task<IEnumerable<object>> GetStudentExamResultsAsync(string studentId);
     }
 }
