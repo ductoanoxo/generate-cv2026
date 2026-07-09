@@ -36,5 +36,44 @@ namespace backend.Controllers
             var semesters = await _scheduleService.GetSemestersAsync();
             return Ok(semesters);
         }
+
+        [HttpGet("today")]
+        public async Task<IActionResult> GetTodaySchedule([FromQuery] string? userId, [FromQuery] int? role, [FromQuery] DateTime? date)
+        {
+            var finalUserId = userId ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var roleStr = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            var finalRole = role ?? (int.TryParse(roleStr, out var r) ? r : 1);
+
+            if (string.IsNullOrEmpty(finalUserId))
+            {
+                return BadRequest(new { message = "userId is required or user must be authenticated" });
+            }
+
+            var schedule = await _scheduleService.GetScheduleTodayAsync(finalUserId, finalRole, date);
+            return Ok(schedule);
+        }
+
+        [HttpGet("by-week")]
+        public async Task<IActionResult> GetWeeklySchedule([FromQuery] string? userId, [FromQuery] int? role, [FromQuery] DateTime? date)
+        {
+            var finalUserId = userId ?? User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var roleStr = User.FindFirst(System.Security.Claims.ClaimTypes.Role)?.Value;
+            var finalRole = role ?? (int.TryParse(roleStr, out var r) ? r : 1);
+
+            if (string.IsNullOrEmpty(finalUserId))
+            {
+                return BadRequest(new { message = "userId is required or user must be authenticated" });
+            }
+
+            var schedule = await _scheduleService.GetScheduleByWeekAsync(finalUserId, finalRole, date);
+            return Ok(schedule);
+        }
+
+        [HttpGet("semesters")]
+        public async Task<IActionResult> GetSemesters()
+        {
+            var semesters = await _scheduleService.GetSemestersAsync();
+            return Ok(semesters);
+        }
     }
 }
