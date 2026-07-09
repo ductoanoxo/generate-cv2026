@@ -68,5 +68,12 @@ namespace backend.Controllers
             var schedule = await _scheduleService.GetScheduleByWeekAsync(finalUserId, finalRole, date);
             return Ok(schedule);
         }
+
+        [HttpGet("semesters")]
+        public async Task<IActionResult> GetSemesters()
+        {
+            var semesters = await _scheduleService.GetSemestersAsync();
+            return Ok(semesters);
+        }
     }
 }
