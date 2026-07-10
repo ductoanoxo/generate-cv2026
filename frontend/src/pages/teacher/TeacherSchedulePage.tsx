@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Calendar, Cloud } from "@phosphor-icons/react";
+import { Calendar, Cloud, CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useAuth } from "../../context/AuthContext";
 import axios from "axios";
 
@@ -44,7 +44,8 @@ export const TeacherSchedulePage: React.FC = () => {
   const [isSemOpen, setIsSemOpen] = useState<boolean>(false);
   const [isWeekOpen, setIsWeekOpen] = useState<boolean>(false);
 
-  const days = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"];
+  // const days = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6"];
+  const days = ["Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật"];
   const slots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
 
   // Close dropdowns on clicking outside
@@ -81,8 +82,9 @@ export const TeacherSchedulePage: React.FC = () => {
     let currentMonday = new Date(monday);
     let weekNum = 1;
 
-    // Safety ceiling of 35 weeks to prevent infinite loops on malformed date ranges
-    while (currentMonday <= end && weekNum <= 35) {
+    // Safety ceiling of 60 weeks to prevent infinite loops on malformed date ranges
+    // while (currentMonday <= end && weekNum <= 35) {
+    while (currentMonday <= end && weekNum <= 60) {
       const currentSunday = new Date(currentMonday);
       currentSunday.setDate(currentMonday.getDate() + 6);
 
@@ -132,7 +134,8 @@ export const TeacherSchedulePage: React.FC = () => {
         }
       } catch (err) {
         console.error("Failed to fetch semesters from backend:", err);
-        setErrorMsg("Không thể kết nối cơ sở dữ liệu để tải danh sách học kỳ.");
+        // setErrorMsg("Không thể kết nối cơ sở dữ liệu để tải danh sách học kỳ.");
+        setErrorMsg("Không thể kết nối cơ sở dữ liệu để tải danh sách năm học.");
       }
     };
 
@@ -403,10 +406,17 @@ export const TeacherSchedulePage: React.FC = () => {
               position: "relative",
             }}
           >
+            {/*
             <label
               style={{ fontSize: "0.95rem", color: "#94A3B8", fontWeight: 600 }}
             >
               Học kỳ:
+            </label>
+            */}
+            <label
+              style={{ fontSize: "0.95rem", color: "#94A3B8", fontWeight: 600 }}
+            >
+              Năm học:
             </label>
             <div style={{ position: "relative", width: "280px" }}>
               <button
@@ -440,10 +450,16 @@ export const TeacherSchedulePage: React.FC = () => {
                     whiteSpace: "nowrap",
                   }}
                 >
+                  {/*
                   {semesters.find(
                     (s) =>
                       s.id.toLowerCase() === selectedSemester.toLowerCase(),
                   )?.name || "Chọn học kỳ"}
+                  */}
+                  {semesters.find(
+                    (s) =>
+                      s.id.toLowerCase() === selectedSemester.toLowerCase(),
+                  )?.name || "Chọn năm học"}
                 </span>
                 <span
                   style={{
@@ -640,27 +656,98 @@ export const TeacherSchedulePage: React.FC = () => {
         </div>
       </div>
 
+      {/*
       <div className="schedule-grid" style={{ marginTop: "16px" }}>
-        <div className="schedule-header-cell">Tiết học</div>
+      */}
+      <div className="schedule-grid" style={{ gridTemplateColumns: "120px repeat(7, 1fr)", marginTop: "16px" }}>
+        <div className="schedule-header-cell" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 8px", gridColumn: 1, gridRow: 1 }}>
+          <button
+            onClick={() => {
+              if (selectedWeekNum > 1) {
+                setSelectedWeekNum(selectedWeekNum - 1);
+              }
+            }}
+            disabled={selectedWeekNum <= 1}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: selectedWeekNum <= 1 ? "#475569" : "#22C55E",
+              cursor: selectedWeekNum <= 1 ? "not-allowed" : "pointer",
+              padding: "4px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "background 0.2s, color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (selectedWeekNum > 1) {
+                e.currentTarget.style.background = "rgba(34, 197, 94, 0.15)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Tuần trước"
+          >
+            <CaretLeft size={16} weight="bold" />
+          </button>
+          <span>Tiết học</span>
+          <button
+            onClick={() => {
+              if (selectedWeekNum < weeks.length) {
+                setSelectedWeekNum(selectedWeekNum + 1);
+              }
+            }}
+            disabled={selectedWeekNum >= weeks.length}
+            style={{
+              background: "transparent",
+              border: "none",
+              color: selectedWeekNum >= weeks.length ? "#475569" : "#22C55E",
+              cursor: selectedWeekNum >= weeks.length ? "not-allowed" : "pointer",
+              padding: "4px",
+              borderRadius: "4px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "background 0.2s, color 0.2s",
+            }}
+            onMouseEnter={(e) => {
+              if (selectedWeekNum < weeks.length) {
+                e.currentTarget.style.background = "rgba(34, 197, 94, 0.15)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "transparent";
+            }}
+            title="Tuần sau"
+          >
+            <CaretRight size={16} weight="bold" />
+          </button>
+        </div>
         {days.map((day, idx) => (
-          <div key={idx} className="schedule-header-cell">
+          <div key={idx} className="schedule-header-cell" style={{ gridColumn: idx + 2, gridRow: 1 }}>
             {day}
           </div>
         ))}
 
         {slots.map((slot) => (
           <React.Fragment key={slot}>
-            <div className="schedule-time-cell">Tiết {slot}</div>
+            <div className="schedule-time-cell" style={{ gridColumn: 1, gridRow: slot + 1 }}>Tiết {slot}</div>
             {days.map((_, dayIdx) => {
               const schedule = getSlotDetails(dayIdx, slot);
               if (schedule) {
                 if (schedule.slotStart === slot) {
-                  const span = schedule.slotEnd - schedule.slotStart + 1;
+                  const span = Math.max(1, schedule.slotEnd - schedule.slotStart + 1);
                   return (
                     <div
                       key={dayIdx}
                       className="schedule-slot-cell"
-                      style={{ gridRow: `span ${span}`, height: "auto" }}
+                      style={{
+                        gridColumn: dayIdx + 2,
+                        gridRow: `${slot + 1} / span ${span}`,
+                        height: "auto"
+                      }}
                     >
                       <div className="schedule-slot-occupied">
                         <div className="schedule-slot-title">
@@ -686,7 +773,13 @@ export const TeacherSchedulePage: React.FC = () => {
                 }
                 return null;
               } else {
-                return <div key={dayIdx} className="schedule-slot-cell" />;
+                return (
+                  <div
+                    key={dayIdx}
+                    className="schedule-slot-cell"
+                    style={{ gridColumn: dayIdx + 2, gridRow: slot + 1 }}
+                  />
+                );
               }
             })}
           </React.Fragment>

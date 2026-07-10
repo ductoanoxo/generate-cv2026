@@ -49,13 +49,79 @@ namespace backend.Services
             _context = context;
         }
 
-        public Task<IEnumerable<object>> GetScheduleByStudentAsync(string studentId)
+        public async Task<IEnumerable<object>> GetScheduleByStudentAsync(string studentId, Guid? semesterId = null)
         {
-            var schedule = new List<object>
+            if (!Guid.TryParse(studentId, out var studentGuid))
             {
-                new { SubjectName = "Kỹ thuật lập trình C", ClassCode = "IT21A", Room = "A201", DayOfWeek = 2, SlotStart = 1, SlotEnd = 4 }
-            };
-            return Task.FromResult<IEnumerable<object>>(schedule);
+                return Enumerable.Empty<object>();
+            }
+
+            var student = await _context.Students
+                .FirstOrDefaultAsync(s => (s.Id == studentGuid || s.UserId == studentGuid) && !s.IsDeleted);
+
+            if (student == null)
+            {
+                return Enumerable.Empty<object>();
+            }
+
+            var actualStudentId = student.Id;
+
+            var subjectTeachingIds = await _context.SubjectStudents
+                .Where(ss => ss.StudentId == actualStudentId)
+                .Select(ss => ss.SubjectTeachingId)
+                .ToListAsync();
+
+            var query = _context.SubjectSchedules
+                .Include(ss => ss.SubjectTeaching)
+                    .ThenInclude(st => st.Subject)
+                .Include(ss => ss.Room)
+                .Include(ss => ss.Teacher)
+                    .ThenInclude(t => t!.User)
+                .Where(ss => !ss.IsDeleted && subjectTeachingIds.Contains(ss.SubjectTeachingId));
+
+            if (semesterId.HasValue)
+            {
+                var academicYear = await _context.AcademicYears
+                    .FirstOrDefaultAsync(ay => ay.Id == semesterId.Value);
+
+                if (academicYear != null)
+                {
+                    var startLimit = DateTime.SpecifyKind(academicYear.StartDate, DateTimeKind.Utc);
+                    var endLimit = DateTime.SpecifyKind(academicYear.EndDate, DateTimeKind.Utc);
+                    query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
+                }
+            }
+            else
+            {
+                var currentYear = DateTime.UtcNow.Year;
+                var activeYear = await _context.AcademicYears
+                    .FirstOrDefaultAsync(ay => ay.Year == currentYear && !ay.IsDeleted)
+                    ?? await _context.AcademicYears.OrderByDescending(ay => ay.Year).FirstOrDefaultAsync(ay => !ay.IsDeleted);
+
+                if (activeYear != null)
+                {
+                    var startLimit = DateTime.SpecifyKind(activeYear.StartDate, DateTimeKind.Utc);
+                    var endLimit = DateTime.SpecifyKind(activeYear.EndDate, DateTimeKind.Utc);
+                    query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
+                }
+            }
+
+            var schedules = await query
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
         }
 
         public async Task<IEnumerable<object>> GetScheduleByTeacherAsync(string teacherId, Guid? semesterId = null)
@@ -65,6 +131,7 @@ namespace backend.Services
                 return Enumerable.Empty<object>();
             }
 
+            /*
             var teacherFacultyIds = await _context.TeacherFaculties
                 .Where(tf => tf.UserId == teacherGuid && !tf.IsDeleted)
                 .Select(tf => tf.Id)
@@ -77,7 +144,30 @@ namespace backend.Services
                 .Include(ss => ss.Teacher)
                     .ThenInclude(t => t!.User)
                 .Where(ss => ss.TeacherId != null && teacherFacultyIds.Contains(ss.TeacherId.Value) && !ss.IsDeleted);
+            */
 
+            var teacherFacultyIds = await _context.TeacherFaculties
+                .Where(tf => tf.UserId == teacherGuid && !tf.IsDeleted)
+                .Select(tf => tf.Id)
+                .ToListAsync();
+
+            var subjectTeachingIds = await _context.SubjectTeachingTeachers
+                .Where(stt => stt.TeacherId != null && teacherFacultyIds.Contains(stt.TeacherId.Value) && !stt.IsDeleted)
+                .Select(stt => stt.SubjectTeachingId)
+                .ToListAsync();
+
+            var query = _context.SubjectSchedules
+                .Include(ss => ss.SubjectTeaching)
+                    .ThenInclude(st => st.Subject)
+                .Include(ss => ss.Room)
+                .Include(ss => ss.Teacher)
+                    .ThenInclude(t => t!.User)
+                .Where(ss => !ss.IsDeleted && (
+                    subjectTeachingIds.Contains(ss.SubjectTeachingId)
+                    || (ss.TeacherId != null && teacherFacultyIds.Contains(ss.TeacherId.Value))
+                ));
+
+            /*
             if (semesterId.HasValue)
             {
                 var semester = await _context.SemesterPlans
@@ -103,6 +193,34 @@ namespace backend.Services
                     query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
                 }
             }
+            */
+
+            if (semesterId.HasValue)
+            {
+                var academicYear = await _context.AcademicYears
+                    .FirstOrDefaultAsync(ay => ay.Id == semesterId.Value);
+
+                if (academicYear != null)
+                {
+                    var startLimit = DateTime.SpecifyKind(academicYear.StartDate, DateTimeKind.Utc);
+                    var endLimit = DateTime.SpecifyKind(academicYear.EndDate, DateTimeKind.Utc);
+                    query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
+                }
+            }
+            else
+            {
+                var currentYear = DateTime.UtcNow.Year;
+                var activeYear = await _context.AcademicYears
+                    .FirstOrDefaultAsync(ay => ay.Year == currentYear && !ay.IsDeleted)
+                    ?? await _context.AcademicYears.OrderByDescending(ay => ay.Year).FirstOrDefaultAsync(ay => !ay.IsDeleted);
+
+                if (activeYear != null)
+                {
+                    var startLimit = DateTime.SpecifyKind(activeYear.StartDate, DateTimeKind.Utc);
+                    var endLimit = DateTime.SpecifyKind(activeYear.EndDate, DateTimeKind.Utc);
+                    query = query.Where(ss => ss.StartDateTime >= startLimit && ss.StartDateTime <= endLimit);
+                }
+            }
 
             var schedules = await query
                 .Select(ss => new
@@ -124,6 +242,7 @@ namespace backend.Services
 
         public async Task<IEnumerable<object>> GetSemestersAsync()
         {
+            /*
             var semesters = await _context.SemesterPlans
                 .Include(sp => sp.AcademicYear)
                 .Where(sp => !sp.IsDeleted)
@@ -154,6 +273,36 @@ namespace backend.Services
                 .ToList();
 
             return sorted.Cast<object>();
+            */
+
+            var currentYear = DateTime.UtcNow.Year;
+            var academicYears = await _context.AcademicYears
+                .Where(ay => !ay.IsDeleted)
+                .OrderByDescending(ay => ay.Year)
+                .ToListAsync();
+
+            var result = academicYears.Select(ay => new
+            {
+                Id = ay.Id.ToString(),
+                Name = ay.Name,
+                StartDate = ay.StartDate,
+                EndDate = ay.EndDate,
+                IsActive = ay.Year == currentYear
+            }).ToList();
+
+            if (!result.Any(r => r.IsActive) && result.Any())
+            {
+                result[0] = new
+                {
+                    result[0].Id,
+                    result[0].Name,
+                    result[0].StartDate,
+                    result[0].EndDate,
+                    IsActive = true
+                };
+            }
+
+            return result.Cast<object>();
         }
 
         public Task<IEnumerable<object>> GetScheduleByFacultyAsync(string facultyId)

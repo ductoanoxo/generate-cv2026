@@ -113,6 +113,18 @@ using (var scope = app.Services.CreateScope())
             Console.WriteLine($"- AcademicYear: {item.AcademicYearName} (Dates: {item.AcademicYearStart:yyyy-MM-dd} to {item.AcademicYearEnd:yyyy-MM-dd}) | Semester: {item.Semester} (Dates: {item.SemesterStart:yyyy-MM-dd} to {item.SemesterEnd:yyyy-MM-dd})");
         }
         Console.WriteLine("========================================");
+
+        var examNames = context.SubjectTeachingExams
+            .Select(e => e.Name)
+            .Distinct()
+            .ToList();
+        Console.WriteLine("========================================");
+        Console.WriteLine("DEBUG: DISTINCT EXAM NAMES:");
+        foreach (var name in examNames)
+        {
+            Console.WriteLine($"- Exam Name: '{name}'");
+        }
+        Console.WriteLine("========================================");
     }
     catch (Exception ex)
     {

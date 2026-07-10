@@ -30,6 +30,8 @@ import { TeacherExamsPage } from './pages/teacher/TeacherExamsPage';
 import { StudentDashboard } from './pages/student/StudentDashboard';
 import { StudentSchedule } from './pages/student/StudentSchedule';
 import { CVBuilder } from './pages/student/CVBuilder';
+import { StudentScores } from './pages/student/StudentScores';
+import { StudentAnnouncements } from './pages/student/StudentAnnouncements';
 
 const RootRedirect: React.FC = () => {
   const { user } = useAuth();
@@ -212,6 +214,26 @@ const App: React.FC = () => {
               <ProtectedRoute allowedRoles={[1]}>
                 <DashboardLayout>
                   <StudentDashboard />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/announcements"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <DashboardLayout>
+                  <StudentAnnouncements />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/scores"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <DashboardLayout>
+                  <StudentScores />
                 </DashboardLayout>
               </ProtectedRoute>
             }

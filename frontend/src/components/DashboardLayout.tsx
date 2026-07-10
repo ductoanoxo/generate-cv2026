@@ -13,7 +13,9 @@ import {
   Database, 
   Clock, 
   SignOut,
-  User as UserIcon
+  User as UserIcon,
+  Notebook,
+  Megaphone
 } from '@phosphor-icons/react';
 
 interface DashboardLayoutProps {
@@ -132,6 +134,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           {/* Student Menu */}
           {isStudent && (
             <>
+              <NavLink to="/student/announcements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <Megaphone size={20} />
+                <span>Thông Báo</span>
+              </NavLink>
+              <NavLink to="/student/scores" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <Notebook size={20} />
+                <span>Xem Điểm</span>
+              </NavLink>
               <NavLink to="/student/schedule" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                 <Calendar size={20} />
                 <span>Thời Khóa Biểu</span>

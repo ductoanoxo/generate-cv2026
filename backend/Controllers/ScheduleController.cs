@@ -17,9 +17,9 @@ namespace backend.Controllers
         }
 
         [HttpGet("student/{id}")]
-        public async Task<IActionResult> GetStudentSchedule(string id)
+        public async Task<IActionResult> GetStudentSchedule(string id, [FromQuery] Guid? semesterId)
         {
-            var schedule = await _scheduleService.GetScheduleByStudentAsync(id);
+            var schedule = await _scheduleService.GetScheduleByStudentAsync(id, semesterId);
             return Ok(schedule);
         }
 

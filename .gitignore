@@ -14,10 +14,14 @@
 *.sln.docstates
 .vs/
 .idea/
+.vscode/
+.history/
 *.userprefs
 *.mono
 *.metadata
 .DS_Store
+Thumbs.db
+[Dd]esktop.ini
 
 # --- Frontend Node & Build Files ---
 node_modules/
