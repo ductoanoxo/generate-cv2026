@@ -11,5 +11,6 @@ namespace backend.Services
         Task<StudentProfileDto?> GetStudentProfileAsync(Guid studentId);
         Task<IEnumerable<StudentAnnouncementDto>> GetStudentAnnouncementsAsync(Guid studentId);
         Task<IEnumerable<StudentSemesterScoreDto>> GetStudentScoresBySemesterAsync(Guid studentId);
+        Task<IEnumerable<StudentExamResultDto>> GetStudentExamResultsAsync(string studentId);
     }
 }

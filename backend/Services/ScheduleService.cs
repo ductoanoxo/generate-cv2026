@@ -311,6 +311,175 @@ namespace backend.Services
             return Task.FromResult<IEnumerable<object>>(schedule);
         }
 
+        public async Task<IEnumerable<object>> GetScheduleTodayAsync(string userId, int role, DateTime? date = null)
+        {
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return Enumerable.Empty<object>();
+            }
+
+            var targetDate = date?.Date ?? DateTime.UtcNow.Date;
+            var nextDate = targetDate.AddDays(1);
+            var targetDateUtc = DateTime.SpecifyKind(targetDate, DateTimeKind.Utc);
+            var nextDateUtc = DateTime.SpecifyKind(nextDate, DateTimeKind.Utc);
+
+            IQueryable<backend.Data.Entities.SubjectSchedule> query;
+
+            if (role == 1) // Student
+            {
+                var student = await _context.Students
+                    .FirstOrDefaultAsync(s => (s.Id == userGuid || s.UserId == userGuid) && !s.IsDeleted);
+
+                if (student == null)
+                {
+                    return Enumerable.Empty<object>();
+                }
+
+                var actualStudentId = student.Id;
+
+                var subjectTeachingIds = await _context.SubjectStudents
+                    .Where(ss => ss.StudentId == actualStudentId)
+                    .Select(ss => ss.SubjectTeachingId)
+                    .ToListAsync();
+
+                query = _context.SubjectSchedules
+                    .Include(ss => ss.SubjectTeaching)
+                        .ThenInclude(st => st.Subject)
+                    .Include(ss => ss.Room)
+                    .Include(ss => ss.Teacher)
+                        .ThenInclude(t => t!.User)
+                    .Where(ss => !ss.IsDeleted && subjectTeachingIds.Contains(ss.SubjectTeachingId));
+            }
+            else // Teacher
+            {
+                var teacherFacultyIds = await _context.TeacherFaculties
+                    .Where(tf => tf.UserId == userGuid && !tf.IsDeleted)
+                    .Select(tf => tf.Id)
+                    .ToListAsync();
+
+                var subjectTeachingIds = await _context.SubjectTeachingTeachers
+                    .Where(stt => stt.TeacherId != null && teacherFacultyIds.Contains(stt.TeacherId.Value) && !stt.IsDeleted)
+                    .Select(stt => stt.SubjectTeachingId)
+                    .ToListAsync();
+
+                query = _context.SubjectSchedules
+                    .Include(ss => ss.SubjectTeaching)
+                        .ThenInclude(st => st.Subject)
+                    .Include(ss => ss.Room)
+                    .Include(ss => ss.Teacher)
+                        .ThenInclude(t => t!.User)
+                    .Where(ss => !ss.IsDeleted && (
+                        subjectTeachingIds.Contains(ss.SubjectTeachingId)
+                        || (ss.TeacherId != null && teacherFacultyIds.Contains(ss.TeacherId.Value))
+                    ));
+            }
+
+            query = query.Where(ss => ss.StartDateTime >= targetDateUtc && ss.StartDateTime < nextDateUtc);
+
+            var schedules = await query
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
+        }
+
+        public async Task<IEnumerable<object>> GetScheduleByWeekAsync(string userId, int role, DateTime? date = null)
+        {
+            if (!Guid.TryParse(userId, out var userGuid))
+            {
+                return Enumerable.Empty<object>();
+            }
+
+            var targetDate = date?.Date ?? DateTime.UtcNow.Date;
+            int diff = (7 + (targetDate.DayOfWeek - DayOfWeek.Monday)) % 7;
+            var startOfWeek = targetDate.AddDays(-1 * diff).Date;
+            var endOfWeek = startOfWeek.AddDays(7);
+
+            var startOfWeekUtc = DateTime.SpecifyKind(startOfWeek, DateTimeKind.Utc);
+            var endOfWeekUtc = DateTime.SpecifyKind(endOfWeek, DateTimeKind.Utc);
+
+            IQueryable<backend.Data.Entities.SubjectSchedule> query;
+
+            if (role == 1) // Student
+            {
+                var student = await _context.Students
+                    .FirstOrDefaultAsync(s => (s.Id == userGuid || s.UserId == userGuid) && !s.IsDeleted);
+
+                if (student == null)
+                {
+                    return Enumerable.Empty<object>();
+                }
+
+                var actualStudentId = student.Id;
+
+                var subjectTeachingIds = await _context.SubjectStudents
+                    .Where(ss => ss.StudentId == actualStudentId)
+                    .Select(ss => ss.SubjectTeachingId)
+                    .ToListAsync();
+
+                query = _context.SubjectSchedules
+                    .Include(ss => ss.SubjectTeaching)
+                        .ThenInclude(st => st.Subject)
+                    .Include(ss => ss.Room)
+                    .Include(ss => ss.Teacher)
+                        .ThenInclude(t => t!.User)
+                    .Where(ss => !ss.IsDeleted && subjectTeachingIds.Contains(ss.SubjectTeachingId));
+            }
+            else // Teacher
+            {
+                var teacherFacultyIds = await _context.TeacherFaculties
+                    .Where(tf => tf.UserId == userGuid && !tf.IsDeleted)
+                    .Select(tf => tf.Id)
+                    .ToListAsync();
+
+                var subjectTeachingIds = await _context.SubjectTeachingTeachers
+                    .Where(stt => stt.TeacherId != null && teacherFacultyIds.Contains(stt.TeacherId.Value) && !stt.IsDeleted)
+                    .Select(stt => stt.SubjectTeachingId)
+                    .ToListAsync();
+
+                query = _context.SubjectSchedules
+                    .Include(ss => ss.SubjectTeaching)
+                        .ThenInclude(st => st.Subject)
+                    .Include(ss => ss.Room)
+                    .Include(ss => ss.Teacher)
+                        .ThenInclude(t => t!.User)
+                    .Where(ss => !ss.IsDeleted && (
+                        subjectTeachingIds.Contains(ss.SubjectTeachingId)
+                        || (ss.TeacherId != null && teacherFacultyIds.Contains(ss.TeacherId.Value))
+                    ));
+            }
+
+            query = query.Where(ss => ss.StartDateTime >= startOfWeekUtc && ss.StartDateTime < endOfWeekUtc);
+
+            var schedules = await query
+                .Select(ss => new
+                {
+                    Id = ss.Id.ToString(),
+                    SubjectName = ss.SubjectTeaching.Subject.Name,
+                    ClassCode = ss.SubjectTeaching.Name,
+                    Room = ss.Room != null ? ss.Room.Name : "N/A",
+                    DayOfWeek = (int)ss.StartDateTime.DayOfWeek == 0 ? 8 : (int)ss.StartDateTime.DayOfWeek + 1,
+                    SlotStart = GetSlotFromTime(ss.StartDateTime.TimeOfDay),
+                    SlotEnd = GetSlotFromTime(ss.EndDateTime.TimeOfDay),
+                    TeacherName = ss.Teacher != null && ss.Teacher.User != null ? ss.Teacher.User.FullName : "N/A",
+                    StartDateTime = ss.StartDateTime
+                })
+                .ToListAsync();
+
+            return schedules.Cast<object>();
+        }
+
         private static int GetSlotFromTime(TimeSpan time)
         {
             if (time.Hours < 7) return 1;

@@ -50,8 +50,10 @@ namespace backend.Data
                 var exists = context.Users.Any(u => u.UserName.ToLower() == userDef.Username.ToLower());
                 if (!exists)
                 {
-                    // Create password hash using the userDef.Username as password
-                    PasswordHelper.CreatePasswordHash(userDef.Username, out string hash, out byte[] salt);
+                    // Create password hash using "admin" for admin, and "password123" for other users to match frontend quick login buttons
+                    string seedPassword = userDef.Username == "admin" ? "admin" : "password123";
+                    PasswordHelper.CreatePasswordHash(seedPassword, out string hash, out byte[] salt);
+                    // PasswordHelper.CreatePasswordHash(userDef.Username, out string hash, out byte[] salt);
 
                     var user = new User
                     {

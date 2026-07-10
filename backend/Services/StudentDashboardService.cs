@@ -508,5 +508,29 @@ namespace backend.Services
                 return Math.Clamp(slot, 11, 12);
             }
         }
+
+        public async Task<IEnumerable<StudentExamResultDto>> GetStudentExamResultsAsync(string studentId)
+        {
+            if (!Guid.TryParse(studentId, out var studentGuid))
+            {
+                var studentObj = await _context.Students.FirstOrDefaultAsync(s => s.User != null && (s.User.UserName == studentId || s.User.UserInternalId == studentId));
+                if (studentObj != null)
+                {
+                    studentGuid = studentObj.Id;
+                }
+                else
+                {
+                    return Enumerable.Empty<StudentExamResultDto>();
+                }
+            }
+
+            var student = await _context.Students.FirstOrDefaultAsync(s => (s.Id == studentGuid || s.UserId == studentGuid) && !s.IsDeleted);
+            if (student == null)
+            {
+                return Enumerable.Empty<StudentExamResultDto>();
+            }
+
+            return await GetExamResultsInternalAsync(student.Id);
+        }
     }
 }
