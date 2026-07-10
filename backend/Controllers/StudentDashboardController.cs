@@ -99,5 +99,12 @@ namespace backend.Controllers
             var scores = await _studentService.GetStudentScoresBySemesterAsync(resolvedId);
             return Ok(scores);
         }
+
+        [HttpGet("exams")]
+        public async Task<IActionResult> GetExams([FromQuery] string studentId)
+        {
+            var exams = await _studentService.GetStudentExamResultsAsync(studentId);
+            return Ok(exams);
+        }
     }
 }

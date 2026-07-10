@@ -55,6 +55,25 @@ generate-cv/
 
 ---
 
+## 🔌 Danh Sách API Endpoints Đã Triển Khai (Implemented Endpoints)
+
+Hệ thống cung cấp các API RESTful phục vụ cho các trang Dashboard hiển thị dữ liệu thực tế từ cơ sở dữ liệu Supabase:
+
+### 📊 Admin Dashboard API (Role 99)
+- **`GET /api/admin/dashboard`**: Truy vấn số liệu KPIs (Tổng sinh viên, giảng viên, khoa, môn học), phân bố sinh viên theo Khoa/Khóa, thống kê & xu hướng điểm danh theo tháng, và phân bố phổ điểm thi toàn trường.
+- **`GET /api/admin/audit-logs`**: Lấy nhật ký hoạt động hệ thống gần đây (phục vụ bảng activity log).
+- **`GET /api/admin/devices`**: Thống kê thiết bị đã đăng ký (Desktop, Mobile, Tablet) phục vụ biểu đồ donut.
+- **`GET /api/admin/settings`**: Xem các thiết lập cấu hình hệ thống (năm học, học kỳ, tích hợp...).
+
+### 📅 Schedule API (Thời Khóa Biểu)
+- **`GET /api/schedule/today`**: Lấy lịch học/dạy hôm nay của người dùng dựa trên `userId` và `role` (hỗ trợ tự động nhận diện từ claims của token JWT hoặc từ query parameters).
+- **`GET /api/schedule/by-week`**: Lấy lịch học/dạy của cả tuần (Thứ 2 - Chủ nhật) chứa ngày được yêu cầu.
+- **`GET /api/schedule/student/{id}`**: Lấy toàn bộ thời khóa biểu của sinh viên theo ID.
+- **`GET /api/schedule/teacher/{id}`**: Lấy thời khóa biểu giảng dạy của giảng viên (tùy chọn filter theo `semesterId`).
+- **`GET /api/schedule/semesters`**: Lấy danh sách các học kỳ có trong hệ thống.
+
+---
+
 ## 🔐 Phân Quyền Hệ Thống & Tài Khoản Thử Nghiệm
 
 Hệ thống phân quyền dựa trên trường dữ liệu `Role` (số nguyên) trong bảng `Users`. Trang đăng nhập tích hợp sẵn tính năng nhấn chọn nhanh để kiểm thử các Role sau:

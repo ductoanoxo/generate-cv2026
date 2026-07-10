@@ -27,5 +27,12 @@ namespace backend.Controllers
             var heatmap = await _attendanceService.GetClassAttendanceHeatmapAsync(classId);
             return Ok(heatmap);
         }
+
+        [HttpGet("recent")]
+        public async Task<IActionResult> GetRecent([FromQuery] int limit = 10)
+        {
+            var logs = await _attendanceService.GetRecentAttendanceLogsAsync(limit);
+            return Ok(logs);
+        }
     }
 }

@@ -35,13 +35,6 @@ namespace backend.Data
                 }
             }
 
-            // Seed users if the table is empty
-            if (context.Users.Any())
-            {
-                Console.WriteLine("Users table already has data. Skipping seed.");
-                return;
-            }
-
             var testUsers = new[]
             {
                 new { Username = "admin", FullName = "Nguyễn Văn Quản Trị", Role = 99, InternalId = "AD99" },
@@ -51,29 +44,39 @@ namespace backend.Data
                 new { Username = "sv_toan", FullName = "Đặng Đức Toàn", Role = 1, InternalId = "SV01" }
             };
 
+            bool changed = false;
             foreach (var userDef in testUsers)
             {
-                // Create password hash using the userDef.Username as password
-                PasswordHelper.CreatePasswordHash(userDef.Username, out string hash, out byte[] salt);
-
-                var user = new User
+                var exists = context.Users.Any(u => u.UserName.ToLower() == userDef.Username.ToLower());
+                if (!exists)
                 {
-                    Id = Guid.NewGuid(),
-                    UserName = userDef.Username,
-                    PasswordHash = hash,
-                    PasswordSalt = salt,
-                    FullName = userDef.FullName,
-                    Role = userDef.Role,
-                    UserInternalId = userDef.InternalId,
-                    IsActived = true,
-                    IsDeleted = false
-                };
+                    // Create password hash using the userDef.Username as password
+                    PasswordHelper.CreatePasswordHash(userDef.Username, out string hash, out byte[] salt);
 
-                context.Users.Add(user);
+                    var user = new User
+                    {
+                        Id = Guid.NewGuid(),
+                        UserName = userDef.Username,
+                        PasswordHash = hash,
+                        PasswordSalt = salt,
+                        FullName = userDef.FullName,
+                        Role = userDef.Role,
+                        UserInternalId = userDef.InternalId,
+                        IsActived = true,
+                        IsDeleted = false
+                    };
+
+                    context.Users.Add(user);
+                    changed = true;
+                    Console.WriteLine($"Seeding test account: {userDef.Username}");
+                }
             }
 
-            context.SaveChanges();
-            Console.WriteLine("Database seeded successfully with 5 test accounts.");
+            if (changed)
+            {
+                context.SaveChanges();
+                Console.WriteLine("Database seeded successfully with missing test accounts.");
+            }
         }
     }
 }

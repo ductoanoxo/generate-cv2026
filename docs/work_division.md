@@ -92,12 +92,12 @@ backend/
 
 ```
 Week 1 — Setup & Auth Framework (Task A1 -> A7):
-  ☐ A1. Tạo project Web API .NET 8, tích hợp Npgsql.EntityFrameworkCore.PostgreSQL.
-  ☐ A2. Cấu hình DbContext kết nối Supabase, scaffold/reverse engineer 37 Entities.
-  ☐ A3. Viết PasswordHelper để kiểm tra hash password hiện có trong cột PasswordHash (Users).
-  ☐ A4. Viết AuthService: Tạo token JWT chứa thông tin User.Id, UserName, và Users.Role.
-  ☐ A5. Tạo AuthController (POST /api/auth/login, GET /api/auth/me).
-  ☐ A6. Viết RoleAuthorizationMiddleware chặn request nếu sai Role ID (1, 2, 10, 20, 50, 99).
+  ☑ A1. Tạo project Web API .NET 8, tích hợp Npgsql.EntityFrameworkCore.PostgreSQL.
+  ☑ A2. Cấu hình DbContext kết nối Supabase, scaffold/reverse engineer 37 Entities.
+  ☑ A3. Viết PasswordHelper để kiểm tra hash password hiện có trong cột PasswordHash (Users).
+  ☑ A4. Viết AuthService: Tạo token JWT chứa thông tin User.Id, UserName, và Users.Role.
+  ☑ A5. Tạo AuthController (POST /api/auth/login, GET /api/auth/me).
+  ☑ A6. Viết RoleAuthorizationMiddleware chặn request nếu sai Role ID (1, 2, 10, 20, 50, 99).
   ☐ A7. Merge code lên branch `main` để bàn giao DbContext/Entities cho Dev B.
 
 Week 2 — Admin Dashboard APIs (Task A8 -> A11):
@@ -110,12 +110,12 @@ Week 2 — Admin Dashboard APIs (Task A8 -> A11):
   ☐ A11. Viết ScheduleService & ScheduleController: GET /api/schedule/today, /by-week.
 
 Week 3 — Faculty & Dept Dashboards (Task A12 -> A17):
-  ☐ A12. Viết FacultyDashboardService truy vấn KPIs khoa, danh sách GV khoa, điểm danh HP.
-  ☐ A13. Viết FacultyDashboardController: GET /api/faculty/dashboard.
-  ☐ A14. Viết DepartmentDashboardService truy vấn KPIs bộ môn, ngân hàng đề thi.
-  ☐ A15. Viết DepartmentDashboardController: GET /api/department/dashboard.
-  ☐ A16. Tối ưu hóa SQL query (Index, Eager loading) tránh N+1 query khi hiển thị dashboard.
-  ☐ A17. Bàn giao Swagger API Docs cuối cùng.
+  ☑ A12. Viết FacultyDashboardService truy vấn KPIs khoa, danh sách GV khoa, điểm danh HP.
+  ☑ A13. Viết FacultyDashboardController: GET /api/faculty/dashboard.
+  ☑ A14. Viết DepartmentDashboardService truy vấn KPIs bộ môn, ngân hàng đề thi.
+  ☑ A15. Viết DepartmentDashboardController: GET /api/department/dashboard.
+  ☑ A16. Tối ưu hóa SQL query (Index, Eager loading) tránh N+1 query khi hiển thị dashboard.
+  ☑ A17. Bàn giao Swagger API Docs cuối cùng.
 ```
 
 ---
