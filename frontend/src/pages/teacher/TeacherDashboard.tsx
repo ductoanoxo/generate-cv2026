@@ -53,6 +53,8 @@ export const TeacherDashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMock, setIsMock] = useState<boolean>(false);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [classPage, setClassPage] = useState<number>(1);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -68,18 +70,22 @@ export const TeacherDashboard: React.FC = () => {
         setIsMock(true);
         // Fallback to local mock data matching backend DTO structure
         setData({
-          classesCount: 2,
+          classesCount: mockSubjectTeachings.length + 2,
           todaySlotsCount: 4,
           alertStudentsCount: teacherStats.alertStudents.length,
-          classes: mockSubjectTeachings.slice(0, 2).map(st => ({
-            id: st.id,
-            subjectCode: st.subjectCode,
-            subjectName: st.subjectName,
-            classCode: st.classCode,
-            totalSessions: st.totalSessions,
-            completedSessions: st.completedSessions,
-            studentsCount: st.studentsCount
-          })),
+          classes: [
+            ...mockSubjectTeachings.map(st => ({
+              id: st.id,
+              subjectCode: st.subjectCode,
+              subjectName: st.subjectName,
+              classCode: st.classCode,
+              totalSessions: st.totalSessions,
+              completedSessions: st.completedSessions,
+              studentsCount: st.studentsCount
+            })),
+            { id: 'st6', subjectCode: 'IT302', subjectName: 'Lập trình di động', classCode: 'IT20B', totalSessions: 15, completedSessions: 8, studentsCount: 42 },
+            { id: 'st7', subjectCode: 'IT305', subjectName: 'An toàn thông tin', classCode: 'IT20A', totalSessions: 15, completedSessions: 10, studentsCount: 48 }
+          ],
           todaySchedules: mockSchedules.slice(0, 2).map(sch => ({
             id: sch.id,
             subjectName: sch.subjectName,
@@ -157,34 +163,83 @@ export const TeacherDashboard: React.FC = () => {
       {/* Main Grid */}
       <div className="grid-2col">
         {/* Classes list */}
-        <div className="panel-card">
-          <div className="panel-header">
-            <h2>Danh sách Lớp học phần đang dạy</h2>
-          </div>
-          <div className="data-table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Mã môn</th>
-                  <th>Tên Môn Học</th>
-                  <th>Lớp</th>
-                  <th>Đã dạy</th>
-                  <th>Sĩ số</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.classes.map((st) => (
-                  <tr key={st.id}>
-                    <td style={{ fontFamily: 'var(--font-heading)', color: '#22C55E' }}>{st.subjectCode}</td>
-                    <td style={{ fontWeight: 600 }}>{st.subjectName}</td>
-                    <td style={{ fontFamily: 'var(--font-heading)' }}>{st.classCode}</td>
-                    <td>{st.completedSessions}/{st.totalSessions} buổi</td>
-                    <td style={{ fontWeight: 600 }}>{st.studentsCount} SV</td>
+        <div className="panel-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+          <div>
+            <div className="panel-header">
+              <h2>Danh sách Lớp học phần đang dạy</h2>
+            </div>
+            <div className="data-table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Mã môn</th>
+                    <th>Tên Môn Học</th>
+                    <th>Lớp</th>
+                    <th>Đã dạy</th>
+                    <th>Sĩ số</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const classesPerPage = 5;
+                    const indexOfLastClass = classPage * classesPerPage;
+                    const indexOfFirstClass = indexOfLastClass - classesPerPage;
+                    const currentClasses = data.classes.slice(indexOfFirstClass, indexOfLastClass);
+                    
+                    return currentClasses.map((st) => (
+                      <tr key={st.id}>
+                        <td style={{ fontFamily: 'var(--font-heading)', color: '#22C55E' }}>{st.subjectCode}</td>
+                        <td style={{ fontWeight: 600 }}>{st.subjectName}</td>
+                        <td style={{ fontFamily: 'var(--font-heading)' }}>{st.classCode}</td>
+                        <td>{st.completedSessions}/{st.totalSessions} buổi</td>
+                        <td style={{ fontWeight: 600 }}>{st.studentsCount} SV</td>
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </div>
           </div>
+
+          {data.classes.length > 5 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+              <button 
+                onClick={() => setClassPage(prev => Math.max(prev - 1, 1))}
+                disabled={classPage === 1}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--color-border)',
+                  color: classPage === 1 ? '#475569' : '#F8FAFC',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  cursor: classPage === 1 ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Trước
+              </button>
+              <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                Trang {classPage} / {Math.ceil(data.classes.length / 5)}
+              </span>
+              <button 
+                onClick={() => setClassPage(prev => Math.min(prev + 1, Math.ceil(data.classes.length / 5)))}
+                disabled={classPage === Math.ceil(data.classes.length / 5)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid var(--color-border)',
+                  color: classPage === Math.ceil(data.classes.length / 5) ? '#475569' : '#F8FAFC',
+                  padding: '4px 10px',
+                  borderRadius: '4px',
+                  cursor: classPage === Math.ceil(data.classes.length / 5) ? 'not-allowed' : 'pointer',
+                  fontSize: '0.8rem',
+                  transition: 'all 0.2s'
+                }}
+              >
+                Sau
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Schedule today */}
@@ -256,24 +311,73 @@ export const TeacherDashboard: React.FC = () => {
               <h2>Sinh viên cần chú ý đặc biệt</h2>
             </div>
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-            {data.alertStudents.length > 0 ? (
-              data.alertStudents.map((alert, index) => (
-                <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{alert.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Lớp: {alert.classCode} • Lý do: <span style={{ color: '#EF4444' }}>{alert.reason}</span></div>
-                  </div>
-                  <div>
-                    <span className={`status-badge ${alert.status === 'Warning' ? 'unexcused' : 'late'}`} style={{ fontSize: '0.65rem' }}>
-                      {alert.status}
-                    </span>
-                  </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'space-between', height: 'calc(100% - 60px)' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {data.alertStudents.length > 0 ? (
+                (() => {
+                  const studentsPerPage = 5;
+                  const indexOfLastStudent = currentPage * studentsPerPage;
+                  const indexOfFirstStudent = indexOfLastStudent - studentsPerPage;
+                  const currentStudents = data.alertStudents.slice(indexOfFirstStudent, indexOfLastStudent);
+                  
+                  return currentStudents.map((alert, index) => (
+                    <div key={index} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{alert.name}</div>
+                        <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>Lớp: {alert.classCode} • Lý do: <span style={{ color: '#EF4444' }}>{alert.reason}</span></div>
+                      </div>
+                      <div>
+                        <span className={`status-badge ${alert.status === 'Warning' ? 'unexcused' : 'late'}`} style={{ fontSize: '0.65rem' }}>
+                          {alert.status}
+                        </span>
+                      </div>
+                    </div>
+                  ));
+                })()
+              ) : (
+                <div style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '0.9rem' }}>
+                  Không có sinh viên nào cần lưu ý đặc biệt.
                 </div>
-              ))
-            ) : (
-              <div style={{ textAlign: 'center', padding: '24px', color: '#64748B', fontSize: '0.9rem' }}>
-                Không có sinh viên nào cần lưu ý đặc biệt.
+              )}
+            </div>
+            
+            {data.alertStudents.length > 5 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '12px', paddingTop: '8px', borderTop: '1px solid rgba(255, 255, 255, 0.05)' }}>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--color-border)',
+                    color: currentPage === 1 ? '#475569' : '#F8FAFC',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    cursor: currentPage === 1 ? 'not-allowed' : 'pointer',
+                    fontSize: '0.8rem',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Trước
+                </button>
+                <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>
+                  Trang {currentPage} / {Math.ceil(data.alertStudents.length / 5)}
+                </span>
+                <button 
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.ceil(data.alertStudents.length / 5)))}
+                  disabled={currentPage === Math.ceil(data.alertStudents.length / 5)}
+                  style={{
+                    background: 'rgba(255, 255, 255, 0.05)',
+                    border: '1px solid var(--color-border)',
+                    color: currentPage === Math.ceil(data.alertStudents.length / 5) ? '#475569' : '#F8FAFC',
+                    padding: '4px 10px',
+                    borderRadius: '4px',
+                    cursor: currentPage === Math.ceil(data.alertStudents.length / 5) ? 'not-allowed' : 'pointer',
+                    fontSize: '0.8rem',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Sau
+                </button>
               </div>
             )}
           </div>

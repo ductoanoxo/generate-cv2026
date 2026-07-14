@@ -152,7 +152,7 @@ namespace backend.Services
                                 // if (name.Contains("cuối") || name.Contains("cuoi") || name.Contains("thi học kỳ") || name.Contains("thi hoc ky"))
                                 if (type == 3)
                                 {
-                                    weight = 0.6;
+                                    weight = 0.5;
                                     name = "Điểm cuối kỳ";
                                 }
                                 // else if (name.Contains("giữa") || name.Contains("giua"))
@@ -219,7 +219,14 @@ namespace backend.Services
                 var gradedSubjects = subjectScores.Where(s => s.CombinedResult.HasValue || s.Result.HasValue).ToList();
                 if (gradedSubjects.Any())
                 {
-                    semesterGpa = gradedSubjects.Average(s => s.CombinedResult ?? s.Result!.Value);
+                    semesterGpa = 0.0;
+                    var totalCredits = 0;
+                    foreach (var subject in gradedSubjects)
+                    {
+                        semesterGpa += subject.CombinedResult * subject.CreditPoint ?? subject.Result!.Value * subject.CreditPoint; // Use CombinedResult if available, otherwise use Result
+                        totalCredits += subject.CreditPoint;
+                    }
+                    semesterGpa /= totalCredits;
                 }
 
                 resultList.Add(new StudentSemesterScoreDto
