@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { mockQuestionSuites } from '../../mock/mockData';
+import { useAuth } from '../../context/AuthContext';
 import { Database, Cloud, Database as DatabaseIcon } from '@phosphor-icons/react';
 
 interface QuestionSuiteItem {
@@ -14,6 +14,7 @@ interface QuestionSuiteItem {
 }
 
 export const QuestionsPage: React.FC = () => {
+  const { user } = useAuth();
   const [questions, setQuestions] = useState<QuestionSuiteItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMock, setIsMock] = useState<boolean>(false);
@@ -22,20 +23,21 @@ export const QuestionsPage: React.FC = () => {
     const fetchQuestions = async () => {
       try {
         setLoading(true);
-        const departmentId = '345c4ed0-dd7e-473e-231b-08d9d001b4e8';
+        const departmentId = user?.majorId;
+        if (!departmentId) throw new Error('Tài khoản chưa được gán bộ môn/ngành');
         const response = await axios.get<QuestionSuiteItem[]>(`http://localhost:5000/api/department/questions?departmentId=${departmentId}`);
         setQuestions(response.data);
         setIsMock(false);
       } catch (err: any) {
         console.warn('Failed to fetch questions from API, using mock questions', err);
-        setQuestions(mockQuestionSuites);
+        setQuestions([]);
         setIsMock(true);
       } finally {
         setLoading(false);
       }
     };
     fetchQuestions();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (

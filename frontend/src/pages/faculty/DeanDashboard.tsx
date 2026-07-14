@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { facultyStats, mockSchedules } from '../../mock/mockData';
+import { facultyStats } from '../../mock/mockData';
 import { Users, UserSquare, Notebook, BookOpen, Database, Cloud } from '@phosphor-icons/react';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { 
   BarChart, 
   Bar, 
@@ -59,6 +60,7 @@ interface FacultyDashboardData {
 }
 
 export const DeanDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<FacultyDashboardData | null>(null);
   const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -68,7 +70,8 @@ export const DeanDashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const facultyId = '4d82e2b2-ff50-4df3-a7c3-08618fb26f32';
+        const facultyId = user?.facultyId;
+        if (!facultyId) throw new Error('Tài khoản chưa được gán khoa');
         const [dashboardRes, scheduleRes] = await Promise.all([
           axios.get<FacultyDashboardData>(`http://localhost:5000/api/faculty/dashboard?facultyId=${facultyId}`),
           axios.get<any[]>(`http://localhost:5000/api/schedule/faculty/${facultyId}`)
@@ -80,8 +83,8 @@ export const DeanDashboard: React.FC = () => {
       } catch (err: any) {
         console.warn('Faculty Dean API connection failed, falling back to mock data', err);
         setIsMock(true);
-        setData(facultyStats as any);
-        setSchedules(mockSchedules);
+        setData(null);
+        setSchedules([]);
       } finally {
         setLoading(false);
       }
@@ -96,6 +99,10 @@ export const DeanDashboard: React.FC = () => {
         <p style={{ color: '#94A3B8' }}>Đang tải dữ liệu dashboard khoa...</p>
       </div>
     );
+  }
+
+  if (!data) {
+    return <div className="panel-card fade-in"><h2>Không thể tải dữ liệu Khoa</h2><p>API chưa trả dữ liệu thật từ Supabase.</p></div>;
   }
 
   const kpisData = data?.kpis || facultyStats.kpis;
@@ -133,7 +140,7 @@ export const DeanDashboard: React.FC = () => {
           fontWeight: 600
         }}>
           {isMock ? <Cloud size={16} /> : <Database size={16} />}
-          <span>{isMock ? 'Dữ liệu Mock (CSDL Offline)' : 'Dữ liệu Live (Supabase DB)'}</span>
+          <span>{isMock ? 'API không khả dụng' : 'Dữ liệu Live (Supabase DB)'}</span>
         </div>
       </div>
 

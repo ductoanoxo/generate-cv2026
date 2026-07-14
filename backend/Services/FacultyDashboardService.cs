@@ -21,7 +21,7 @@ namespace backend.Services
             if (!Guid.TryParse(facultyId, out var facultyGuid))
             {
                 // Fallback / default data
-                return GetDefaultFacultyStats();
+                return new { kpis = new { students = 0, teachers = 0, majors = 0, subjects = 0 }, teachers = Array.Empty<object>(), semesterProgress = 0, classAttendanceRates = Array.Empty<object>(), averageScoresBySubject = Array.Empty<object>(), teacherEvaluations = Array.Empty<object>() };
             }
 
             // A16: Tối ưu hóa truy vấn bằng cách lọc và đếm trực tiếp trên Database, tránh N+1.
@@ -48,7 +48,7 @@ namespace backend.Services
                 })
                 .ToListAsync();
 
-            int semesterProgress = 80; // default/fallback
+            int semesterProgress = 0;
             if (teachings.Any())
             {
                 var totalSessions = teachings.Sum(t => t.Total);
@@ -89,16 +89,6 @@ namespace backend.Services
                 };
             }).ToList();
 
-            if (!classAttendanceRates.Any())
-            {
-                classAttendanceRates = new List<object>
-                {
-                    new { name = "IT21A - Lập trình C", present = 95, late = 2, absence = 3 },
-                    new { name = "IT21B - Cơ sở dữ liệu", present = 91, late = 3, absence = 6 },
-                    new { name = "IT21A - Web nâng cao", present = 93, late = 1, absence = 6 },
-                    new { name = "IT20A - Kỹ thuật PM", present = 88, late = 5, absence = 7 }
-                } as dynamic;
-            }
 
             // 4. Average Scores by Subject
             // A16: Tính điểm trung bình các môn học qua kết quả thi của sinh viên khoa.
@@ -118,17 +108,6 @@ namespace backend.Services
                 .ToListAsync();
 
             var averageScoresBySubject = averageScores.Cast<object>().ToList();
-            if (!averageScoresBySubject.Any())
-            {
-                averageScoresBySubject = new List<object>
-                {
-                    new { name = "Kỹ thuật lập trình C", score = 7.2 },
-                    new { name = "Cơ sở dữ liệu", score = 6.8 },
-                    new { name = "Lập trình Web nâng cao", score = 7.5 },
-                    new { name = "Phân tích & thiết kế HT", score = 7.0 },
-                    new { name = "Kỹ thuật phần mềm", score = 7.4 }
-                };
-            }
 
             // 5. Teacher Evaluations
             var evaluationsRaw = await _context.StudentEvaluationDetails
@@ -145,17 +124,6 @@ namespace backend.Services
                 .ToListAsync();
 
             var teacherEvaluations = evaluationsRaw.Cast<object>().ToList();
-            if (!teacherEvaluations.Any())
-            {
-                teacherEvaluations = new List<object>
-                {
-                    new { aspect = "Kiến thức chuyên môn", value = 4.8 },
-                    new { aspect = "Phương pháp sư phạm", value = 4.5 },
-                    new { aspect = "Tương tác & hỗ trợ", value = 4.6 },
-                    new { aspect = "Đúng giờ & kỷ luật", value = 4.9 },
-                    new { aspect = "Tính rõ ràng của bài giảng", value = 4.4 }
-                };
-            }
 
             // 6. Faculty Teachers (nested in stats for easier consumption)
             var teachers = await GetFacultyTeachersInternalAsync(facultyGuid);
@@ -181,7 +149,7 @@ namespace backend.Services
         {
             if (!Guid.TryParse(facultyId, out var facultyGuid))
             {
-                return GetDefaultTeachers();
+                return Array.Empty<object>();
             }
             return await GetFacultyTeachersInternalAsync(facultyGuid);
         }
@@ -216,7 +184,7 @@ namespace backend.Services
                     Absence = Math.Round((double)absenceCount * 100 / total)
                 };
             }
-            return new { Present = 95, Late = 2, Absence = 3 };
+            return new { Present = 0, Late = 0, Absence = 0 };
         }
 
         private async Task<IEnumerable<object>> GetFacultyTeachersInternalAsync(Guid facultyGuid)
@@ -237,7 +205,7 @@ namespace backend.Services
 
             if (!teachers.Any())
             {
-                return GetDefaultTeachers();
+                return Array.Empty<object>();
             }
 
             return teachers;

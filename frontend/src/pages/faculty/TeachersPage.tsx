@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { facultyStats } from '../../mock/mockData';
 import { Users, Cloud, Database } from '@phosphor-icons/react';
+import { useAuth } from '../../context/AuthContext';
 
 interface FacultyTeacher {
   name: string;
@@ -14,12 +15,14 @@ export const TeachersPage: React.FC = () => {
   const [teachers, setTeachers] = useState<FacultyTeacher[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMock, setIsMock] = useState<boolean>(false);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchTeachers = async () => {
       try {
         setLoading(true);
-        const facultyId = '4d82e2b2-ff50-4df3-a7c3-08618fb26f32';
+        const facultyId = user?.facultyId;
+        if (!facultyId) throw new Error('Tài khoản chưa được gán khoa');
         const response = await axios.get<FacultyTeacher[]>(`http://localhost:5000/api/faculty/teachers?facultyId=${facultyId}`);
         setTeachers(response.data);
         setIsMock(false);
@@ -32,7 +35,7 @@ export const TeachersPage: React.FC = () => {
       }
     };
     fetchTeachers();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (

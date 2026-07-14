@@ -10,6 +10,8 @@ import { AdminDashboard } from './pages/admin/AdminDashboard';
 import { AuditLogsPage } from './pages/admin/AuditLogsPage';
 import { DevicesPage } from './pages/admin/DevicesPage';
 import { SettingsPage } from './pages/admin/SettingsPage';
+import { AdminTeachersPage } from './pages/admin/TeachersPage';
+import { AdminStudentsPage } from './pages/admin/StudentsPage';
 
 // Faculty/Dean Pages
 import { DeanDashboard } from './pages/faculty/DeanDashboard';
@@ -110,6 +112,8 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route path="/admin/teachers" element={<ProtectedRoute allowedRoles={[99]}><DashboardLayout><AdminTeachersPage /></DashboardLayout></ProtectedRoute>} />
+          <Route path="/admin/students" element={<ProtectedRoute allowedRoles={[99]}><DashboardLayout><AdminStudentsPage /></DashboardLayout></ProtectedRoute>} />
 
           {/* Faculty Dean Routes (Role 50) */}
           <Route

@@ -69,6 +69,38 @@ namespace backend.Services
                 return null;
             }
 
+            var facultyId = await context.TeacherFaculties
+                .Where(t => t.UserId == userGuid && !t.IsDeleted)
+                .Select(t => (Guid?)t.FacultyId)
+                .FirstOrDefaultAsync();
+            if (user.Role == RoleHelper.Dean && !facultyId.HasValue)
+            {
+                facultyId = await context.Faculties
+                    .Where(f => !f.IsDeleted)
+                    .OrderBy(f => f.Code)
+                    .Select(f => (Guid?)f.Id)
+                    .FirstOrDefaultAsync();
+            }
+            var studentScope = await context.Students
+                .Where(s => s.UserId == userGuid && !s.IsDeleted)
+                .Select(s => new { s.MajorId, FacultyId = s.Major.FacultyId })
+                .FirstOrDefaultAsync();
+            var departmentMajorId = facultyId.HasValue
+                ? await context.Majors.Where(m => m.FacultyId == facultyId && !m.IsDeleted)
+                    .Select(m => (Guid?)m.Id).FirstOrDefaultAsync()
+                : null;
+            // Department-head seed users may not yet have a TeacherFaculty row.
+            // Resolve their department to the first active major so Role 20 can
+            // still use the live department APIs instead of the frontend mock path.
+            if (user.Role == RoleHelper.DeptHead && !departmentMajorId.HasValue)
+            {
+                departmentMajorId = await context.Majors
+                    .Where(m => !m.IsDeleted)
+                    .OrderBy(m => m.Code)
+                    .Select(m => (Guid?)m.Id)
+                    .FirstOrDefaultAsync();
+            }
+
             return new
             {
                 UserId = user.Id.ToString(),
@@ -76,7 +108,9 @@ namespace backend.Services
                 FullName = user.FullName,
                 Role = user.Role,
                 RoleName = RoleHelper.GetRoleName(user.Role),
-                UserInternalId = user.UserInternalId
+                UserInternalId = user.UserInternalId,
+                FacultyId = facultyId ?? studentScope?.FacultyId,
+                MajorId = studentScope?.MajorId ?? departmentMajorId
             };
         }
     }

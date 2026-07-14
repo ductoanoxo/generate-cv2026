@@ -134,7 +134,7 @@ export const Login: React.FC = () => {
 
         <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: '16px', marginTop: '16px' }}>
           <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-            Tài khoản chạy thật (Database Supabase - MK: password123):
+            Tài khoản chạy thật (Database Supabase — bấm tài khoản để tự điền cả mật khẩu):
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '12px' }}>
             <button
@@ -146,46 +146,7 @@ export const Login: React.FC = () => {
             >
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>admin1</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Admin)</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectDemoUser('deankhoa', 'password123')}
-              style={buttonStyle}
-              onMouseOver={handleMouseOver}
-              onMouseOut={handleMouseOut}
-            >
-              <div>
-                <span style={{ fontWeight: 700, color: '#22C55E' }}>deankhoa</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Dean - Khoa)</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectDemoUser('tbm_cntt', 'password123')}
-              style={buttonStyle}
-              onMouseOver={handleMouseOver}
-              onMouseOut={handleMouseOut}
-            >
-              <div>
-                <span style={{ fontWeight: 700, color: '#22C55E' }}>tbm_cntt</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(TBM - Bộ môn)</span>
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleSelectDemoUser('sv_toan', 'password123')}
-              style={buttonStyle}
-              onMouseOver={handleMouseOver}
-              onMouseOut={handleMouseOut}
-            >
-              <div>
-                <span style={{ fontWeight: 700, color: '#22C55E' }}>sv_toan</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student)</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Quản trị viên · MK: password123)</span>
               </div>
             </button>
 
@@ -198,35 +159,42 @@ export const Login: React.FC = () => {
             >
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien1</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Dean DB)</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Trưởng Khoa · CNOT&amp;KTML · MK: password123)</span>
               </div>
             </button>
 
             <button
               type="button"
-              onClick={() => handleSelectDemoUser('giaovien2', 'password123')}
+              onClick={() => handleSelectDemoUser('giaovien47', 'password123')}
               style={buttonStyle}
               onMouseOver={handleMouseOver}
               onMouseOut={handleMouseOut}
             >
               <div>
-                <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien2</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Teacher DB)</span>
+                <span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien47</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Trưởng Bộ Môn · CNTT · MK: password123)</span>
               </div>
             </button>
 
-            <button
-              type="button"
-              onClick={() => handleSelectDemoUser('sinhvien1', 'password123')}
-              style={buttonStyle}
-              onMouseOver={handleMouseOver}
-              onMouseOut={handleMouseOut}
-            >
-              <div>
-                <span style={{ fontWeight: 700, color: '#22C55E' }}>sinhvien1</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Student DB)</span>
-              </div>
+            <button type="button" onClick={() => handleSelectDemoUser('deankhoa', 'password123')} style={buttonStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+              <div><span style={{ fontWeight: 700, color: '#22C55E' }}>deankhoa</span><span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Tài khoản cũ · Role 50)</span></div>
             </button>
+            <button type="button" onClick={() => handleSelectDemoUser('tbm_cntt', 'password123')} style={buttonStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+              <div><span style={{ fontWeight: 700, color: '#22C55E' }}>tbm_cntt</span><span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Tài khoản cũ · Role 20)</span></div>
+            </button>
+            <button type="button" onClick={() => handleSelectDemoUser('sv_toan', 'password123')} style={buttonStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+              <div><span style={{ fontWeight: 700, color: '#22C55E' }}>sv_toan</span><span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Tài khoản cũ · Sinh viên)</span></div>
+            </button>
+            <button type="button" onClick={() => handleSelectDemoUser('giaovien2', 'password123')} style={buttonStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+              <div><span style={{ fontWeight: 700, color: '#22C55E' }}>giaovien2</span><span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Tài khoản cũ · Giáo viên)</span></div>
+            </button>
+            <button type="button" onClick={() => handleSelectDemoUser('sinhvien1', 'password123')} style={buttonStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+              <div><span style={{ fontWeight: 700, color: '#22C55E' }}>sinhvien1</span><span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Tài khoản cũ · Sinh viên)</span></div>
+            </button>
+            <button type="button" onClick={() => handleSelectDemoUser('sinhvien246', 'password123')} style={buttonStyle} onMouseOver={handleMouseOver} onMouseOut={handleMouseOut}>
+              <div><span style={{ fontWeight: 700, color: '#22C55E' }}>sinhvien246</span><span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Sinh viên · MK: password123)</span></div>
+            </button>
+
           </div>
 
           <p style={{ fontSize: '0.8rem', color: '#64748B', marginBottom: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -242,7 +210,7 @@ export const Login: React.FC = () => {
             >
               <div>
                 <span style={{ fontWeight: 700, color: '#22C55E' }}>admin</span>
-                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Admin)</span>
+                <span style={{ color: '#94A3B8', fontSize: '0.75rem', marginLeft: '4px' }}>(Admin · MK: admin)</span>
               </div>
             </button>
           </div>
