@@ -125,7 +125,7 @@ export const DeanDashboard: React.FC = () => {
       {/* Live Data Badge */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>Khoa Công nghệ thông tin</h1>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>CNOT&KTML</h1>
           <p style={{ fontSize: '0.8rem', color: '#64748B', margin: '4px 0 0 0' }}>Theo dõi các chỉ số KPIs khoa, đánh giá giảng dạy và lịch tuần tự của các lớp</p>
         </div>
         <div style={{
