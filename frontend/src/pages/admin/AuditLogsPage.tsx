@@ -53,7 +53,7 @@ export const AuditLogsPage: React.FC = () => {
           fontWeight: 600
         }}>
           {isMock ? <Cloud size={14} /> : <Database size={14} />}
-          <span>{isMock ? 'Dữ liệu Mock (CSDL Offline)' : 'Dữ liệu Live (Supabase DB)'}</span>
+          <span>{isMock ? 'API không khả dụng' : 'Dữ liệu Live (Supabase DB)'}</span>
         </div>
       </div>
       <div className="data-table-container">

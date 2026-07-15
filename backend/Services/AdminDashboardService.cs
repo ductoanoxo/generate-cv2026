@@ -279,5 +279,38 @@ namespace backend.Services
 
             return list.Cast<object>();
         }
+
+        public async Task<IEnumerable<object>> GetTeachersListAsync(string? search, int limit)
+        {
+            var query = _context.TeacherFaculties
+                .AsNoTracking().Include(x => x.User).Include(x => x.Faculty)
+                .Where(x => !x.IsDeleted && !x.User.IsDeleted);
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(x => x.User.FullName.Contains(search) || x.User.UserName.Contains(search));
+            return await query.OrderBy(x => x.User.FullName).Take(limit).Select(x => new
+            {
+                id = x.UserId, name = x.User.FullName, username = x.User.UserName,
+                email = x.User.UserName + "@taydo.edu.vn", role = x.User.Role,
+                faculty = x.Faculty.Name, isHeadOfFaculty = x.IsHeadOfFaculty,
+                avatarUrl = x.User.ProfilePicUrl
+            }).ToListAsync();
+        }
+
+        public async Task<IEnumerable<object>> GetStudentsListAsync(string? search, string? facultyId, int limit)
+        {
+            var query = _context.Students.AsNoTracking().Include(x => x.User).Include(x => x.Major).ThenInclude(x => x.Faculty)
+                .Where(x => !x.IsDeleted && !x.User.IsDeleted);
+            if (Guid.TryParse(facultyId, out var fid)) query = query.Where(x => x.Major.FacultyId == fid);
+            if (!string.IsNullOrWhiteSpace(search))
+                query = query.Where(x => x.User.FullName.Contains(search) || x.User.UserName.Contains(search) || x.User.UserInternalId.Contains(search));
+            return await query.OrderBy(x => x.User.FullName).Take(limit).Select(x => new
+            {
+                id = x.Id, userId = x.UserId, name = x.User.FullName, username = x.User.UserName,
+                studentCode = x.User.UserInternalId, faculty = x.Major.Faculty.Name,
+                major = x.Major.Name, academicYear = x.AcademicYear.Name,
+                studyStatus = x.StudyStatus, isGraduated = x.IsGraduated,
+                avatarUrl = x.User.ProfilePicUrl
+            }).ToListAsync();
+        }
     }
 }

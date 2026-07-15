@@ -20,7 +20,7 @@ namespace backend.Services
         {
             if (!Guid.TryParse(departmentId, out var departmentGuid))
             {
-                return GetDefaultDepartmentStats();
+                return new { kpis = new { students = 0, classes = 0, subjects = 0 }, teachingProgress = Array.Empty<object>(), classScoresComparison = Array.Empty<object>() };
             }
 
             // A16: Tối ưu hóa truy vấn để đếm và thống kê ở DB trong 1 vòng.
@@ -74,16 +74,6 @@ namespace backend.Services
                 .Cast<object>()
                 .ToList();
 
-            if (!classScoresComparison.Any())
-            {
-                classScoresComparison = new List<object>
-                {
-                    new Dictionary<string, object> { { "subject", "Kỹ thuật lập trình C" }, { "IT21A", 7.5 }, { "IT21B", 6.8 }, { "IT21C", 7.0 } },
-                    new Dictionary<string, object> { { "subject", "Cơ sở dữ liệu" }, { "IT21A", 6.9 }, { "IT21B", 7.2 }, { "IT21C", 6.5 } },
-                    new Dictionary<string, object> { { "subject", "Lập trình Web nâng cao" }, { "IT21A", 8.0 }, { "IT21B", 7.1 }, { "IT21C", 7.4 } }
-                };
-            }
-
             return new
             {
                 kpis = new
@@ -101,7 +91,7 @@ namespace backend.Services
         {
             if (!Guid.TryParse(departmentId, out var departmentGuid))
             {
-                return GetDefaultTeachingProgress();
+                return Array.Empty<object>();
             }
 
             var subjectIdsOfMajor = await _context.SemesterSubjects
@@ -117,7 +107,7 @@ namespace backend.Services
         {
             if (!Guid.TryParse(departmentId, out var departmentGuid))
             {
-                return GetDefaultQuestionSuites();
+                return Array.Empty<object>();
             }
 
             var subjectIdsOfMajor = await _context.SemesterSubjects
@@ -141,11 +131,6 @@ namespace backend.Services
                 })
                 .ToListAsync<object>();
 
-            if (!questionSuites.Any())
-            {
-                return GetDefaultQuestionSuites();
-            }
-
             return questionSuites;
         }
 
@@ -160,11 +145,6 @@ namespace backend.Services
                     total = st.TotalSessions
                 })
                 .ToListAsync<object>();
-
-            if (!progress.Any())
-            {
-                return GetDefaultTeachingProgress();
-            }
 
             return progress;
         }

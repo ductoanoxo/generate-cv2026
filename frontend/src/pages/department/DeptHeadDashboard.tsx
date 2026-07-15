@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { departmentStats, mockQuestionSuites } from '../../mock/mockData';
 import { Users, Presentation, BookOpen, Database, Cloud } from '@phosphor-icons/react';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 import { 
   BarChart, 
   Bar, 
@@ -151,6 +151,7 @@ const AttendanceHeatmapMatrix: React.FC<{ heatmapData: HeatmapItem[] }> = ({ hea
 };
 
 export const DeptHeadDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [data, setData] = useState<DeptDashboardData | null>(null);
   const [questions, setQuestions] = useState<QuestionSuiteItem[]>([]);
   const [heatmap, setHeatmap] = useState<HeatmapItem[]>([]);
@@ -163,7 +164,8 @@ export const DeptHeadDashboard: React.FC = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const departmentId = '345c4ed0-dd7e-473e-231b-08d9d001b4e8';
+        const departmentId = user?.majorId;
+        if (!departmentId) throw new Error('Tài khoản chưa được gán bộ môn/ngành');
         
         // Fetch dashboard statistics
         const response = await axios.get<DeptDashboardData>(`http://localhost:5000/api/department/dashboard?departmentId=${departmentId}`);
@@ -175,22 +177,22 @@ export const DeptHeadDashboard: React.FC = () => {
           setQuestions(qsResponse.data);
         } catch (qsErr) {
           console.warn('Failed to fetch questions, using mock questions', qsErr);
-          setQuestions(mockQuestionSuites);
+          setQuestions([]);
         }
 
         setIsMock(false);
       } catch (err: any) {
         console.warn('Backend API connection failed, falling back to frontend mock data', err);
         setIsMock(true);
-        setData(departmentStats);
-        setQuestions(mockQuestionSuites);
+        setData(null);
+        setQuestions([]);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [user]);
 
   // Fetch heatmap whenever selected class changes
   useEffect(() => {
@@ -202,7 +204,8 @@ export const DeptHeadDashboard: React.FC = () => {
       } catch (err) {
         console.warn('Failed to fetch attendance heatmap, using mock fallback', err);
         // Standard mock dataset matching mock attendance
-        setHeatmap([
+        setHeatmap([]);
+        /*
           { studentName: "Đặng Đức Toàn", date: "Buổi 1", status: 1 },
           { studentName: "Đặng Đức Toàn", date: "Buổi 2", status: 1 },
           { studentName: "Đặng Đức Toàn", date: "Buổi 3", status: 1 },
@@ -231,6 +234,7 @@ export const DeptHeadDashboard: React.FC = () => {
           { studentName: "Phan Lê Vy", date: "Buổi 5", status: 1 },
           { studentName: "Phan Lê Vy", date: "Buổi 6", status: 1 }
         ]);
+        */
       } finally {
         setHeatmapLoading(false);
       }
@@ -246,10 +250,14 @@ export const DeptHeadDashboard: React.FC = () => {
     );
   }
 
-  const kpisData = data?.kpis || departmentStats.kpis;
-  const teachingProgressList = data?.teachingProgress || departmentStats.teachingProgress;
-  const scoresComparison = data?.classScoresComparison || departmentStats.classScoresComparison;
-  const questionSuitesList = questions.length > 0 ? questions : mockQuestionSuites;
+  if (!loading && !data) {
+    return <div className="panel-card fade-in"><h2>Không thể tải dữ liệu bộ môn</h2><p>API chưa trả dữ liệu live. Kiểm tra mapping bộ môn của tài khoản và backend Supabase.</p></div>;
+  }
+
+  const kpisData = data?.kpis || { students: 0, classes: 0, subjects: 0 };
+  const teachingProgressList = data?.teachingProgress || [];
+  const scoresComparison = data?.classScoresComparison || [];
+  const questionSuitesList = questions;
 
   const kpiItems = [
     { title: 'Sinh viên Bộ môn (SV)', value: kpisData.students, icon: <Users size={24} />, type: 'primary' },
@@ -277,7 +285,7 @@ export const DeptHeadDashboard: React.FC = () => {
           fontWeight: 600
         }}>
           {isMock ? <Cloud size={16} /> : <Database size={16} />}
-          <span>{isMock ? 'Dữ liệu Mock (CSDL Offline)' : 'Dữ liệu Live (Supabase DB)'}</span>
+          <span>{isMock ? 'API không khả dụng' : 'Dữ liệu Live (Supabase DB)'}</span>
         </div>
       </div>
 

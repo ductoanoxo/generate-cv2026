@@ -98,24 +98,29 @@ Week 1 — Setup & Auth Framework (Task A1 -> A7):
   ☑ A4. Viết AuthService: Tạo token JWT chứa thông tin User.Id, UserName, và Users.Role.
   ☑ A5. Tạo AuthController (POST /api/auth/login, GET /api/auth/me).
   ☑ A6. Viết RoleAuthorizationMiddleware chặn request nếu sai Role ID (1, 2, 10, 20, 50, 99).
-  ☐ A7. Merge code lên branch `main` để bàn giao DbContext/Entities cho Dev B.
+  ☑ A7. Bàn giao DbContext/Entities cho Dev B (đã có trong workspace hiện tại).
 
 Week 2 — Admin Dashboard APIs (Task A8 -> A11):
-  ☐ A8.  Viết AdminDashboardService truy vấn KPIs, SV theo khoa/khóa, phân bố điểm thi.
-  ☐ A9.  Viết AdminDashboardController: GET /api/admin/dashboard.
-  ☐ A10. Viết endpoints bổ sung cho Admin: 
+  ☑ A8.  AdminDashboardService truy vấn KPIs, SV theo khoa/khóa, phân bố điểm thi.
+  ☑ A9.  AdminDashboardController: GET /api/admin/dashboard.
+  ☑ A10. Endpoints bổ sung cho Admin:
          - GET /api/admin/audit-logs (AuditLogs)
          - GET /api/admin/settings (Settings table)
          - GET /api/admin/devices (UserDevices donut data)
-  ☐ A11. Viết ScheduleService & ScheduleController: GET /api/schedule/today, /by-week.
+  ☑ A11. ScheduleService & ScheduleController: lịch cá nhân/khoa/bộ môn.
+  ☑ A11b. Danh sách giảng viên toàn hệ thống: GET /api/admin/teachers và giao diện `/admin/teachers`.
+  ☑ A11c. Danh sách sinh viên toàn hệ thống: GET /api/admin/students và giao diện `/admin/students`.
 
 Week 3 — Faculty & Dept Dashboards (Task A12 -> A17):
-  ☑ A12. Viết FacultyDashboardService truy vấn KPIs khoa, danh sách GV khoa, điểm danh HP.
-  ☑ A13. Viết FacultyDashboardController: GET /api/faculty/dashboard.
-  ☑ A14. Viết DepartmentDashboardService truy vấn KPIs bộ môn, ngân hàng đề thi.
-  ☑ A15. Viết DepartmentDashboardController: GET /api/department/dashboard.
-  ☑ A16. Tối ưu hóa SQL query (Index, Eager loading) tránh N+1 query khi hiển thị dashboard.
-  ☑ A17. Bàn giao Swagger API Docs cuối cùng.
+  ☑ A12. FacultyDashboardService truy vấn KPIs khoa, danh sách GV khoa, điểm danh HP.
+  ☑ A13. FacultyDashboardController: GET /api/faculty/dashboard.
+  ☑ A14. DepartmentDashboardService truy vấn KPIs bộ môn, ngân hàng đề thi.
+  ☑ A15. DepartmentDashboardController: GET /api/department/dashboard.
+  ☑ A16. Tối ưu hóa một phần SQL query (Index, Eager loading) tránh N+1.
+  ☐ A17. Cập nhật Swagger/API contract và kiểm thử dữ liệu production (còn pending).
+  ☑ A18. Chuyển connection string sang Supabase pooler port 6543 và loại bỏ mật khẩu khỏi appsettings.
+  ☑ A19. Bỏ password bypass cố định và thêm màn hình danh sách GV/SV cho Admin.
+  ☑ A20. `/api/auth/me` trả phạm vi `FacultyId/MajorId`; dashboard Khoa/Bộ môn lấy scope theo user đăng nhập, không còn phụ thuộc ID hard-code ở frontend.
 ```
 
 ---

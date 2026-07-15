@@ -38,10 +38,16 @@ namespace backend.Data
             var testUsers = new[]
             {
                 new { Username = "admin", FullName = "Nguyễn Văn Quản Trị", Role = 99, InternalId = "AD99" },
+                new { Username = "admin1", FullName = "Nguyễn Văn Quản Trị", Role = 99, InternalId = "AD991" },
                 new { Username = "deankhoa", FullName = "TS. Trần Minh Khoa", Role = 50, InternalId = "DK50" },
                 new { Username = "tbm_cntt", FullName = "ThS. Nguyễn Thị Trưởng", Role = 20, InternalId = "TBM20" },
                 new { Username = "gv_nam", FullName = "ThS. Lê Hoàng Nam", Role = 10, InternalId = "GV10" },
-                new { Username = "sv_toan", FullName = "Đặng Đức Toàn", Role = 1, InternalId = "SV01" }
+                new { Username = "giaovien1", FullName = "Giảng viên Khoa Cơ sở dữ liệu", Role = 50, InternalId = "GVDB1" },
+                new { Username = "giaovien47", FullName = "Trưởng Bộ Môn CNTT", Role = 20, InternalId = "GV000047" },
+                new { Username = "giaovien2", FullName = "Giảng viên bộ môn", Role = 10, InternalId = "GVDB2" },
+                new { Username = "sv_toan", FullName = "Đặng Đức Toàn", Role = 1, InternalId = "SV01" },
+                new { Username = "sinhvien1", FullName = "Sinh viên thử nghiệm", Role = 1, InternalId = "SVDB1" }
+                , new { Username = "sinhvien246", FullName = "Sinh viên 246", Role = 1, InternalId = "SV000246" }
             };
 
             bool changed = false;
@@ -71,6 +77,25 @@ namespace backend.Data
                     context.Users.Add(user);
                     changed = true;
                     Console.WriteLine($"Seeding test account: {userDef.Username}");
+                }
+                else
+                {
+                    // Keep the documented local/demo credentials usable after a previous
+                    // seed or password-helper change. Only these known test accounts are
+                    // synchronized; real users are never modified.
+                    var existingUser = context.Users.First(u => u.UserName.ToLower() == userDef.Username.ToLower());
+                    string seedPassword = userDef.Username == "admin" ? "admin" : "password123";
+                    if (existingUser.PasswordSalt == null || string.IsNullOrWhiteSpace(existingUser.PasswordHash) ||
+                        !PasswordHelper.VerifyPassword(seedPassword, existingUser.PasswordHash, existingUser.PasswordSalt))
+                    {
+                        PasswordHelper.CreatePasswordHash(seedPassword, out string hash, out byte[] salt);
+                        existingUser.PasswordHash = hash;
+                        existingUser.PasswordSalt = salt;
+                        existingUser.IsActived = true;
+                        existingUser.IsDeleted = false;
+                        changed = true;
+                        Console.WriteLine($"Synchronized test account password: {userDef.Username}");
+                    }
                 }
             }
 
