@@ -22,12 +22,12 @@ namespace backend.Controllers
             return Ok(stats);
         }
 
-        [HttpGet("progress")]
-        public async Task<IActionResult> GetProgress([FromQuery] string departmentId)
-        {
-            var progress = await _deptService.GetTeachingProgressAsync(departmentId);
-            return Ok(progress);
-        }
+        // [HttpGet("progress")]
+        // public async Task<IActionResult> GetProgress([FromQuery] string departmentId)
+        // {
+        //     var progress = await _deptService.GetTeachingProgressAsync(departmentId);
+        //     return Ok(progress);
+        // }
 
         [HttpGet("questions")]
         public async Task<IActionResult> GetQuestions([FromQuery] string departmentId)

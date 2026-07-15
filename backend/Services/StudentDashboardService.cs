@@ -37,7 +37,7 @@ namespace backend.Services
             var profile = await GetStudentProfileInternalAsync(student, actualStudentId);
             var todaySchedules = await GetTodaySchedulesInternalAsync(actualStudentId);
             var attendanceStats = await GetAttendanceStatsInternalAsync(actualStudentId);
-            var examResults = await GetExamResultsInternalAsync(actualStudentId);
+            // var examResults = await GetExamResultsInternalAsync(actualStudentId);
             var currentSubjects = await GetCurrentSubjectsInternalAsync(actualStudentId);
             var announcements = await GetAnnouncementsInternalAsync(actualUserId, actualStudentId);
 
@@ -46,7 +46,7 @@ namespace backend.Services
                 Profile = profile,
                 TodaySchedules = todaySchedules,
                 AttendanceStats = attendanceStats,
-                ExamResults = examResults,
+                ExamResults = null,
                 CurrentSubjects = currentSubjects,
                 Announcements = announcements
             };

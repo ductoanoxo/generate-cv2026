@@ -60,21 +60,21 @@ namespace backend.Controllers
             return Ok(dashboard);
         }
 
-        [HttpGet("profile")]
-        public async Task<IActionResult> GetProfile([FromQuery] string studentId)
-        {
-            var resolvedId = await ResolveStudentIdAsync(studentId);
-            if (resolvedId == Guid.Empty)
-            {
-                return NotFound(new { message = "Không tìm thấy sinh viên" });
-            }
-            var profile = await _studentService.GetStudentProfileAsync(resolvedId);
-            if (profile == null)
-            {
-                return NotFound(new { message = "Không tìm thấy hồ sơ sinh viên" });
-            }
-            return Ok(profile);
-        }
+        // [HttpGet("profile")]
+        // public async Task<IActionResult> GetProfile([FromQuery] string studentId)
+        // {
+        //     var resolvedId = await ResolveStudentIdAsync(studentId);
+        //     if (resolvedId == Guid.Empty)
+        //     {
+        //         return NotFound(new { message = "Không tìm thấy sinh viên" });
+        //     }
+        //     var profile = await _studentService.GetStudentProfileAsync(resolvedId);
+        //     if (profile == null)
+        //     {
+        //         return NotFound(new { message = "Không tìm thấy hồ sơ sinh viên" });
+        //     }
+        //     return Ok(profile);
+        // }
 
         [HttpGet("announcements")]
         public async Task<IActionResult> GetAnnouncements([FromQuery] string studentId)
@@ -100,11 +100,11 @@ namespace backend.Controllers
             return Ok(scores);
         }
 
-        [HttpGet("exams")]
-        public async Task<IActionResult> GetExams([FromQuery] string studentId)
-        {
-            var exams = await _studentService.GetStudentExamResultsAsync(studentId);
-            return Ok(exams);
-        }
+        // [HttpGet("exams")]
+        // public async Task<IActionResult> GetExams([FromQuery] string studentId)
+        // {
+        //     var exams = await _studentService.GetStudentExamResultsAsync(studentId);
+        //     return Ok(exams);
+        // }
     }
 }
