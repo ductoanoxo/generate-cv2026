@@ -7,5 +7,7 @@ namespace backend.Services
         Task<object> GetDeviceDistributionAsync();
         Task<object> GetSettingsAsync();
         Task<IEnumerable<object>> GetUserDevicesListAsync(int limit);
+        Task<IEnumerable<object>> GetTeachersListAsync(string? search, int limit);
+        Task<IEnumerable<object>> GetStudentsListAsync(string? search, string? facultyId, int limit);
     }
 }

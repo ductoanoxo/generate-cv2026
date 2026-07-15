@@ -60,6 +60,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fullName: backendUser.fullName,
         email: `${backendUser.username}@taydo.edu.vn`,
         role: backendUser.role,
+        facultyId: backendUser.facultyId,
+        majorId: backendUser.majorId,
         avatar: `https://api.dicebear.com/7.x/adventurer/svg?seed=${backendUser.username}`
       };
 

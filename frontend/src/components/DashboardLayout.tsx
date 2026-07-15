@@ -86,6 +86,8 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 <Gear size={20} />
                 <span>Cấu Hình</span>
               </NavLink>
+              <NavLink to="/admin/teachers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}><Users size={20} /><span>Giảng viên</span></NavLink>
+              <NavLink to="/admin/students" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}><GraduationCap size={20} /><span>Sinh viên</span></NavLink>
             </>
           )}
 

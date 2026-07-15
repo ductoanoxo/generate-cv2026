@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { departmentStats } from '../../mock/mockData';
+import { useAuth } from '../../context/AuthContext';
 import { Calendar, Cloud, Database } from '@phosphor-icons/react';
 
 interface TeachingProgressItem {
@@ -14,6 +14,7 @@ interface DeptDashboardData {
 }
 
 export const TeachingProgressPage: React.FC = () => {
+  const { user } = useAuth();
   const [progress, setProgress] = useState<TeachingProgressItem[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [isMock, setIsMock] = useState<boolean>(false);
@@ -22,20 +23,21 @@ export const TeachingProgressPage: React.FC = () => {
     const fetchProgress = async () => {
       try {
         setLoading(true);
-        const departmentId = '345c4ed0-dd7e-473e-231b-08d9d001b4e8';
+        const departmentId = user?.majorId;
+        if (!departmentId) throw new Error('Tài khoản chưa được gán bộ môn/ngành');
         const response = await axios.get<DeptDashboardData>(`http://localhost:5000/api/department/dashboard?departmentId=${departmentId}`);
         setProgress(response.data.teachingProgress);
         setIsMock(false);
       } catch (err: any) {
         console.warn('Failed to fetch teaching progress, using mock data', err);
-        setProgress(departmentStats.teachingProgress);
+        setProgress([]);
         setIsMock(true);
       } finally {
         setLoading(false);
       }
     };
     fetchProgress();
-  }, []);
+  }, [user]);
 
   if (loading) {
     return (

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { adminStats, mockAuditLogs, mockDevices, mockSettings } from '../../mock/mockData';
+import { adminStats, mockDevices } from '../../mock/mockData';
 import { 
   Users, 
   UserCircle, 
@@ -136,10 +136,10 @@ export const AdminDashboard: React.FC = () => {
       } catch (err: any) {
         console.warn('Admin API connection failed, falling back to mock data', err);
         setIsMock(true);
-        setData(adminStats as any);
-        setLogs(mockAuditLogs);
-        setDevices(adminStats.devicesDistribution);
-        setSettings(mockSettings);
+        setData(null);
+        setLogs([]);
+        setDevices([]);
+        setSettings(null);
       } finally {
         setLoading(false);
       }
@@ -153,6 +153,10 @@ export const AdminDashboard: React.FC = () => {
         <p style={{ color: '#94A3B8' }}>Đang tải dữ liệu admin dashboard...</p>
       </div>
     );
+  }
+
+  if (!data) {
+    return <div className="panel-card fade-in"><h2>Không thể tải dữ liệu Admin</h2><p>API chưa trả dữ liệu thật từ Supabase.</p></div>;
   }
 
   const kpisData = data?.kpis || adminStats.kpis;
@@ -308,7 +312,7 @@ export const AdminDashboard: React.FC = () => {
           fontWeight: 600
         }}>
           {isMock ? <Cloud size={16} /> : <Database size={16} />}
-          <span>{isMock ? 'Dữ liệu Mock (CSDL Offline)' : 'Dữ liệu Live (Supabase DB)'}</span>
+          <span>{isMock ? 'API không khả dụng' : 'Dữ liệu Live (Supabase DB)'}</span>
         </div>
       </div>
 

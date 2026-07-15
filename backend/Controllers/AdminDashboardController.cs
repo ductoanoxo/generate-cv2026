@@ -48,5 +48,13 @@ namespace backend.Controllers
             var devices = await _dashboardService.GetUserDevicesListAsync(limit);
             return Ok(devices);
         }
+
+        [HttpGet("teachers")]
+        public async Task<IActionResult> GetTeachers([FromQuery] string? search = null, [FromQuery] int limit = 100)
+            => Ok(await _dashboardService.GetTeachersListAsync(search, Math.Clamp(limit, 1, 500)));
+
+        [HttpGet("students")]
+        public async Task<IActionResult> GetStudents([FromQuery] string? search = null, [FromQuery] string? facultyId = null, [FromQuery] int limit = 100)
+            => Ok(await _dashboardService.GetStudentsListAsync(search, facultyId, Math.Clamp(limit, 1, 500)));
     }
 }

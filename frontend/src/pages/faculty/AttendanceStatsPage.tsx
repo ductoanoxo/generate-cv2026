@@ -3,6 +3,7 @@ import { facultyStats, mockAttendanceLogs } from '../../mock/mockData';
 import { ClipboardText, Cloud, Database } from '@phosphor-icons/react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import axios from 'axios';
+import { useAuth } from '../../context/AuthContext';
 
 interface AttendanceLog {
   id: string;
@@ -20,6 +21,7 @@ interface ClassAttendanceRate {
 }
 
 export const AttendanceStatsPage: React.FC = () => {
+  const { user } = useAuth();
   const [logs, setLogs] = useState<AttendanceLog[]>([]);
   const [rates, setRates] = useState<ClassAttendanceRate[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -29,7 +31,8 @@ export const AttendanceStatsPage: React.FC = () => {
     const fetchAttendanceData = async () => {
       try {
         setLoading(true);
-        const facultyId = '4d82e2b2-ff50-4df3-a7c3-08618fb26f32';
+        const facultyId = user?.facultyId;
+        if (!facultyId) throw new Error('Tài khoản chưa được gán khoa');
         
         const [recentRes, ratesRes] = await Promise.all([
           axios.get<AttendanceLog[]>('http://localhost:5000/api/attendance/recent'),
@@ -55,7 +58,7 @@ export const AttendanceStatsPage: React.FC = () => {
       }
     };
     fetchAttendanceData();
-  }, []);
+  }, [user]);
 
   const getStatusText = (status: number) => {
     switch (status) {
