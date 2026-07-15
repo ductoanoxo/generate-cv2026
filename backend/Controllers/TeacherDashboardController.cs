@@ -33,24 +33,24 @@ namespace backend.Controllers
         /// <summary>
         /// Retrieves list of classes currently taught by the specified teacher.
         /// </summary>
-        [HttpGet("classes")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TeacherClassDto>))]
-        public async Task<ActionResult<IEnumerable<TeacherClassDto>>> GetClasses([FromQuery] Guid teacherId)
-        {
-            var classes = await _teacherService.GetClassesTaughtAsync(teacherId);
-            return Ok(classes);
-        }
+        // [HttpGet("classes")]
+        // [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<TeacherClassDto>))]
+        // public async Task<ActionResult<IEnumerable<TeacherClassDto>>> GetClasses([FromQuery] Guid teacherId)
+        // {
+        //     var classes = await _teacherService.GetClassesTaughtAsync(teacherId);
+        //     return Ok(classes);
+        // }
 
         /// <summary>
         /// Retrieves students who need special attention (e.g. high absence count, low performance).
         /// </summary>
-        [HttpGet("alerts")]
-        [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AlertStudentDto>))]
-        public async Task<ActionResult<IEnumerable<AlertStudentDto>>> GetAlerts([FromQuery] Guid teacherId)
-        {
-            var alerts = await _teacherService.GetAlertStudentsAsync(teacherId);
-            return Ok(alerts);
-        }
+        // [HttpGet("alerts")]
+        // [ProducesResponseType(StatusCodes.Status200OK, Type = typeof(IEnumerable<AlertStudentDto>))]
+        // public async Task<ActionResult<IEnumerable<AlertStudentDto>>> GetAlerts([FromQuery] Guid teacherId)
+        // {
+        //     var alerts = await _teacherService.GetAlertStudentsAsync(teacherId);
+        //     return Ok(alerts);
+        // }
 
         /// <summary>
         /// Retrieves the exam question suites bank for subjects assigned to this teacher.

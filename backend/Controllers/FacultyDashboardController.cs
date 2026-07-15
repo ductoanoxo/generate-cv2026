@@ -29,11 +29,11 @@ namespace backend.Controllers
             return Ok(teachers);
         }
 
-        [HttpGet("attendance")]
-        public async Task<IActionResult> GetAttendance([FromQuery] string facultyId)
-        {
-            var attendance = await _facultyService.GetFacultyAttendanceRatesAsync(facultyId);
-            return Ok(attendance);
-        }
+        // [HttpGet("attendance")]
+        // public async Task<IActionResult> GetAttendance([FromQuery] string facultyId)
+        // {
+        //     var attendance = await _facultyService.GetFacultyAttendanceRatesAsync(facultyId);
+        //     return Ok(attendance);
+        // }
     }
 }

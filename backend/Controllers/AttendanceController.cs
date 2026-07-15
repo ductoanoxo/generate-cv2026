@@ -14,12 +14,12 @@ namespace backend.Controllers
             _attendanceService = attendanceService;
         }
 
-        [HttpGet("stats")]
-        public async Task<IActionResult> GetStats([FromQuery] string? classId, [FromQuery] string? studentId)
-        {
-            var stats = await _attendanceService.GetAttendanceStatsAsync(classId, studentId);
-            return Ok(stats);
-        }
+        // [HttpGet("stats")]
+        // public async Task<IActionResult> GetStats([FromQuery] string? classId, [FromQuery] string? studentId)
+        // {
+        //     var stats = await _attendanceService.GetAttendanceStatsAsync(classId, studentId);
+        //     return Ok(stats);
+        // }
 
         [HttpGet("heatmap/{classId}")]
         public async Task<IActionResult> GetHeatmap(string classId)
