@@ -34,6 +34,37 @@ services:
     networks:
       - taydo_network
 
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: taydo_ai_service
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./ai-service/.env
+    environment:
+      - QDRANT_URL=http://qdrant:6333
+    volumes:
+      - ./ai-service:/app
+    depends_on:
+      - qdrant
+    networks:
+      - taydo_network
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: taydo_qdrant
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    networks:
+      - taydo_network
+
 networks:
   taydo_network:
     driver: bridge
+
+volumes:
+  qdrant_data:
