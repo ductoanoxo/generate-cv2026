@@ -123,5 +123,6 @@ def seed_qdrant(qdrant_url: str = None):
 
 
 if __name__ == "__main__":
-    target_url = sys.argv[1] if len(sys.argv) > 1 else os.getenv("QDRANT_URL", "http://localhost:6333")
+    # Use settings.QDRANT_URL (loaded automatically from .env via Pydantic Settings) as fallback
+    target_url = sys.argv[1] if len(sys.argv) > 1 else settings.QDRANT_URL
     seed_qdrant(qdrant_url=target_url)

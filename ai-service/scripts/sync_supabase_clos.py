@@ -15,7 +15,7 @@ from app.services.embedding_service import embedding_service
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
-CLO_DIR = "/home/traductoan/generate-cv/CLO"
+CLO_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "CLO"))
 
 # Template CLO details generator for IT subjects queried from Supabase
 SUBJECT_CLO_TEMPLATES: Dict[str, Dict[str, Any]] = {

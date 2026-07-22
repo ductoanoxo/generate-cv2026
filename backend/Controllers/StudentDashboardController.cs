@@ -15,11 +15,13 @@ namespace backend.Controllers
     {
         private readonly IStudentDashboardService _studentService;
         private readonly AppDbContext _context;
+        private readonly ICVScoreQueryService _scoreService;
 
-        public StudentDashboardController(IStudentDashboardService studentService, AppDbContext context)
+        public StudentDashboardController(IStudentDashboardService studentService, AppDbContext context, ICVScoreQueryService scoreService)
         {
             _studentService = studentService;
             _context = context;
+            _scoreService = scoreService;
         }
 
         private async Task<Guid> ResolveStudentIdAsync(string studentId)
@@ -106,5 +108,17 @@ namespace backend.Controllers
         //     var exams = await _studentService.GetStudentExamResultsAsync(studentId);
         //     return Ok(exams);
         // }
+
+        [HttpGet("{id}/scores/filtered")]
+        public async Task<IActionResult> GetFilteredScores(string id)
+        {
+            var resolvedId = await ResolveStudentIdAsync(id);
+            if (resolvedId == Guid.Empty)
+            {
+                return Ok(new List<CourseScoreDto>());
+            }
+            var scores = await _scoreService.GetFilteredScoresAsync(resolvedId);
+            return Ok(scores);
+        }
     }
 }

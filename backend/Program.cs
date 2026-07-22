@@ -35,6 +35,7 @@ builder.Services.AddScoped<IStudentDashboardService, StudentDashboardService>();
 builder.Services.AddScoped<IAttendanceService, AttendanceService>();
 builder.Services.AddScoped<IExamService, ExamService>();
 builder.Services.AddScoped<IReportService, ReportService>();
+builder.Services.AddScoped<ICVScoreQueryService, CVScoreQueryService>();
 
 // 4. Configure Controllers
 builder.Services.AddControllers();
