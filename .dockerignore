@@ -1,0 +1,9 @@
+.venv
+.venv-light
+venv
+__pycache__
+node_modules
+.git
+.vscode
+.idea
+*.log

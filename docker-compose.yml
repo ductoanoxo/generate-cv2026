@@ -43,15 +43,13 @@ services:
       - "8000:8000"
     env_file:
       - ./ai-service/.env
-    environment:
-      - QDRANT_URL=http://qdrant:6333
     volumes:
       - ./ai-service:/app
-    depends_on:
-      - qdrant
+      - ./CLO:/home/traductoan/generate-cv/CLO
     networks:
       - taydo_network
 
+  # Optional local Qdrant container (if not using Qdrant Cloud)
   qdrant:
     image: qdrant/qdrant:latest
     container_name: taydo_qdrant
