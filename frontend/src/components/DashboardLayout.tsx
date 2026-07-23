@@ -152,6 +152,7 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 <FileText size={20} />
                 <span>Tạo CV Cá Nhân</span>
               </NavLink>
+
             </>
           )}
         </nav>
