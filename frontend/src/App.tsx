@@ -34,6 +34,8 @@ import { StudentSchedule } from './pages/student/StudentSchedule';
 import { CVBuilder } from './pages/student/CVBuilder';
 import { StudentScores } from './pages/student/StudentScores';
 import { StudentAnnouncements } from './pages/student/StudentAnnouncements';
+import { JDMatchPage } from './pages/student/JDMatchPage';
+
 
 const RootRedirect: React.FC = () => {
   const { user } = useAuth();
@@ -262,6 +264,17 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/student/jd-match"
+            element={
+              <ProtectedRoute allowedRoles={[1]}>
+                <DashboardLayout>
+                  <JDMatchPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" replace />} />

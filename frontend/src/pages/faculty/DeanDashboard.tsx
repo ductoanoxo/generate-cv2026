@@ -10,9 +10,7 @@ import {
   ChartBar, 
   CalendarBlank, 
   GraduationCap, 
-  MagnifyingGlass,
-  CheckCircle,
-  Funnel
+  MagnifyingGlass
 } from '@phosphor-icons/react';
 import axios from 'axios';
 import { useAuth } from '../../context/AuthContext';
