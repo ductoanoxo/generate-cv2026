@@ -14,8 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN chmod +x start.sh
-
 EXPOSE 8000
 
-CMD ["./start.sh"]
+# Bypass start.sh to avoid CRLF/shebang issues from Windows volume mount
+CMD ["sh", "-c", "python scripts/seed_vectors.py || echo 'Warning: Vector seeding issue, proceeding...' ; exec uvicorn app.main:app --host 0.0.0.0 --port 8000"]

@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { defaultCVData, type CVData } from '../../mock/mockData';
+import { defaultCVData, type CVData, type Experience, type Certification } from '../../mock/mockData';
 import { JDInputForm } from '../../components/JDInputForm';
 import { MatchedCoursesTable, type MatchedCourse } from '../../components/MatchedCoursesTable';
+import { ProjectForm, type Project } from '../../components/ProjectForm';
+import { InternshipForm } from '../../components/InternshipForm';
+import { CertForm } from '../../components/CertForm';
+import { SkillRadarChart } from '../../components/SkillRadarChart';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
 import axios from 'axios';
@@ -16,8 +20,11 @@ import {
   GraduationCap,
   Sparkle,
   Target,
-  ArrowRight
+  ArrowRight,
+  DownloadSimple,
+  Spinner
 } from '@phosphor-icons/react';
+
 
 export const CVBuilder: React.FC = () => {
   const { user } = useAuth();
@@ -26,15 +33,16 @@ export const CVBuilder: React.FC = () => {
   const [newSkill, setNewSkill] = useState<string>('');
   const [newLanguage, setNewLanguage] = useState<string>('');
   const [newActivity, setNewActivity] = useState<string>('');
-  const [newProject, setNewProject] = useState({ name: '', role: '', description: '', technologies: '' });
   const [selectedGrades, setSelectedGrades] = useState<string[]>(cvData.grades.map(g => g.subjectName));
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // JD Matching states inside CV Builder
   const [jdText, setJdText] = useState<string>('');
   const [matchedCourses, setMatchedCourses] = useState<MatchedCourse[]>([]);
   const [isMatchingLoading, setIsMatchingLoading] = useState<boolean>(false);
   const [rawDbSubjects, setRawDbSubjects] = useState<any[]>([]);
+
 
   // Fetch real student scores from .NET API or Supabase DB
   useEffect(() => {
@@ -54,7 +62,23 @@ export const CVBuilder: React.FC = () => {
             }
           });
           if (list.length > 0) {
-            setRawDbSubjects(list);
+            // Deduplicate by subjectCode / subjectName, keeping the highest score
+            const uniqueMap = new Map<string, any>();
+            list.forEach(sub => {
+              const key = (sub.subjectCode || sub.subjectName || '').trim().toLowerCase();
+              if (!key) return;
+              if (!uniqueMap.has(key)) {
+                uniqueMap.set(key, sub);
+              } else {
+                const existing = uniqueMap.get(key);
+                const existingScore = existing.combinedResult ?? existing.result ?? 0;
+                const newScore = sub.combinedResult ?? sub.result ?? 0;
+                if (newScore > existingScore) {
+                  uniqueMap.set(key, sub);
+                }
+              }
+            });
+            setRawDbSubjects(Array.from(uniqueMap.values()));
             return;
           }
         }
@@ -66,14 +90,24 @@ export const CVBuilder: React.FC = () => {
       try {
         const { data: dbSubjects } = await supabase.from('Subjects').select('*');
         if (dbSubjects && dbSubjects.length > 0) {
-          setRawDbSubjects(dbSubjects.map(s => ({
-            subjectCode: s.SubjectCode || `IT${s.Id?.slice(0, 3)}`,
-            subjectName: s.Name,
-            creditPoint: s.CreditPoint || 3,
-            combinedResult: 8.5,
-            gradeC: 'A',
-            grade4: 4
-          })));
+          const uniqueMap = new Map<string, any>();
+          dbSubjects.forEach(s => {
+            const code = s.SubjectCode || `IT${s.Id?.slice(0, 3)}`;
+            const name = s.Name;
+            const key = (code || name || '').trim().toLowerCase();
+            if (!key) return;
+            if (!uniqueMap.has(key)) {
+              uniqueMap.set(key, {
+                subjectCode: code,
+                subjectName: name,
+                creditPoint: s.CreditPoint || 3,
+                combinedResult: 8.5,
+                gradeC: 'A',
+                grade4: 4
+              });
+            }
+          });
+          setRawDbSubjects(Array.from(uniqueMap.values()));
         }
       } catch (sErr) {
         console.error(sErr);
@@ -169,11 +203,27 @@ export const CVBuilder: React.FC = () => {
         };
       });
 
-      matched.sort((a, b) => b.matchPercentage - a.matchPercentage);
-      setMatchedCourses(matched);
+      // Deduplicate matched array by subjectCode/subjectName
+      const uniqueMatchedMap = new Map<string, MatchedCourse>();
+      matched.forEach(m => {
+        const key = (m.subjectCode || m.subjectName || '').trim().toLowerCase();
+        if (!key) return;
+        if (!uniqueMatchedMap.has(key)) {
+          uniqueMatchedMap.set(key, m);
+        } else {
+          const existing = uniqueMatchedMap.get(key)!;
+          if (m.matchPercentage > existing.matchPercentage) {
+            uniqueMatchedMap.set(key, m);
+          }
+        }
+      });
+
+      const uniqueMatched = Array.from(uniqueMatchedMap.values());
+      uniqueMatched.sort((a, b) => b.matchPercentage - a.matchPercentage);
+      setMatchedCourses(uniqueMatched);
 
       // Auto update CV Grades state with matched courses from DB
-      const updatedCvGrades = matched.map(m => ({
+      const updatedCvGrades = uniqueMatched.map(m => ({
         subjectName: m.subjectName,
         score: m.combinedResult ?? 8.0,
         credits: m.creditPoint
@@ -188,6 +238,7 @@ export const CVBuilder: React.FC = () => {
       setIsMatchingLoading(false);
     }, 600);
   };
+
 
   const handleProfileFieldChange = (field: string, value: any) => {
     setCvData(prev => ({
@@ -257,26 +308,48 @@ export const CVBuilder: React.FC = () => {
     }));
   };
 
-  const handleAddProject = () => {
-    if (newProject.name.trim() && newProject.role.trim()) {
-      const techArray = newProject.technologies.split(',').map(t => t.trim()).filter(Boolean);
-      setCvData(prev => ({
-        ...prev,
-        projects: [...prev.projects, {
-          name: newProject.name.trim(),
-          role: newProject.role.trim(),
-          description: newProject.description.trim(),
-          technologies: techArray
-        }]
-      }));
-      setNewProject({ name: '', role: '', description: '', technologies: '' });
-    }
+  // Handlers for Projects
+  const handleAddProject = (project: Project) => {
+    setCvData(prev => ({
+      ...prev,
+      projects: [...prev.projects, project]
+    }));
   };
 
   const handleRemoveProject = (index: number) => {
     setCvData(prev => ({
       ...prev,
       projects: prev.projects.filter((_, idx) => idx !== index)
+    }));
+  };
+
+  // Handlers for Experience (Internship)
+  const handleAddExperience = (exp: Experience) => {
+    setCvData(prev => ({
+      ...prev,
+      experience: [...(prev.experience || []), exp]
+    }));
+  };
+
+  const handleRemoveExperience = (index: number) => {
+    setCvData(prev => ({
+      ...prev,
+      experience: (prev.experience || []).filter((_, idx) => idx !== index)
+    }));
+  };
+
+  // Handlers for Certifications
+  const handleAddCert = (cert: Certification) => {
+    setCvData(prev => ({
+      ...prev,
+      certifications: [...(prev.certifications || []), cert]
+    }));
+  };
+
+  const handleRemoveCert = (index: number) => {
+    setCvData(prev => ({
+      ...prev,
+      certifications: (prev.certifications || []).filter((_, idx) => idx !== index)
     }));
   };
 
@@ -297,6 +370,45 @@ export const CVBuilder: React.FC = () => {
     window.print();
   };
 
+  const handleExportPDF = async () => {
+    const element = document.getElementById('printable-cv');
+    if (!element) return;
+
+    setIsExportingPdf(true);
+
+    const getHtml2Pdf = async (): Promise<any> => {
+      if ((window as any).html2pdf) {
+        return (window as any).html2pdf;
+      }
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        script.onload = () => resolve((window as any).html2pdf);
+        script.onerror = (e) => reject(e);
+        document.head.appendChild(script);
+      });
+    };
+
+    try {
+      const html2pdfLib = await getHtml2Pdf();
+      const opt = {
+        margin: [8, 8, 8, 8],
+        filename: `CV_${(cvData.profile.fullName || 'Student').replace(/\s+/g, '_')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true, logging: false },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      await html2pdfLib().set(opt).from(element).save();
+      setIsExportingPdf(false);
+    } catch (err) {
+      console.warn('html2pdf library loading failed, falling back to window.print():', err);
+      setIsExportingPdf(false);
+      window.print();
+    }
+  };
+
+
   return (
     <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
       {/* Header and Actions */}
@@ -311,16 +423,30 @@ export const CVBuilder: React.FC = () => {
           </p>
         </div>
         <div style={{ display: 'flex', gap: '8px' }}>
+          <button 
+            className="btn-icon-text primary" 
+            onClick={handleExportPDF} 
+            disabled={isExportingPdf}
+            style={{ opacity: isExportingPdf ? 0.7 : 1 }}
+          >
+            {isExportingPdf ? <Spinner size={18} className="spin" /> : <DownloadSimple size={18} />}
+            <span>{isExportingPdf ? 'Đang tạo PDF...' : 'Tải File PDF'}</span>
+          </button>
+
+          {/* 
           <button className="btn-icon-text" onClick={handlePrint}>
             <Printer size={18} />
-            <span>Xuất PDF / In CV</span>
+            <span>In CV</span>
           </button>
-          <button className="btn-icon-text primary" onClick={handleSave}>
-            {saveSuccess ? <Check size={18} /> : <FloppyDisk size={18} />}
+          */}
+
+          <button className="btn-icon-text" onClick={handleSave} style={{ background: 'rgba(30, 41, 59, 0.8)', border: '1px solid var(--color-border)' }}>
+            {saveSuccess ? <Check size={18} color="#22C55E" /> : <FloppyDisk size={18} />}
             <span>{saveSuccess ? 'Đã lưu CV!' : 'Lưu CV'}</span>
           </button>
         </div>
       </div>
+
 
       {/* Main Tabs Navigation */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(30, 41, 59, 0.6)', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
@@ -539,74 +665,32 @@ export const CVBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Section 5: Projects */}
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <FileText size={18} />
-                <span>5. Dự án thực tế</span>
-              </h3>
-              
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '16px', background: 'rgba(0,0,0,0.2)', padding: '12px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                  <input 
-                    type="text" 
-                    placeholder="Tên dự án" 
-                    className="input-field" 
-                    value={newProject.name}
-                    onChange={(e) => setNewProject(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                  <input 
-                    type="text" 
-                    placeholder="Vai trò" 
-                    className="input-field" 
-                    value={newProject.role}
-                    onChange={(prev) => setNewProject(p => ({ ...p, role: prev.target.value }))}
-                  />
-                </div>
-                <input 
-                  type="text" 
-                  placeholder="Công nghệ (ngăn cách bằng dấu phẩy, vd: React, Node)" 
-                  className="input-field" 
-                  value={newProject.technologies}
-                  onChange={(e) => setNewProject(prev => ({ ...prev, technologies: e.target.value }))}
-                />
-                <textarea 
-                  placeholder="Mô tả dự án..." 
-                  className="input-field" 
-                  rows={2} 
-                  style={{ resize: 'vertical' }}
-                  value={newProject.description}
-                  onChange={(e) => setNewProject(prev => ({ ...prev, description: e.target.value }))}
-                />
-                <button className="btn-icon-text primary" onClick={handleAddProject} style={{ justifyContent: 'center' }}>
-                  <Plus size={16} />
-                  <span>Thêm dự án</span>
-                </button>
-              </div>
+            {/* Section 5: ProjectForm Component */}
+            <ProjectForm
+              projects={cvData.projects}
+              onAddProject={handleAddProject}
+              onRemoveProject={handleRemoveProject}
+            />
 
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {cvData.projects.map((proj, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1px solid var(--color-border)', paddingBottom: '8px' }}>
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{proj.name} ({proj.role})</div>
-                      <div style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{proj.description}</div>
-                    </div>
-                    <button 
-                      onClick={() => handleRemoveProject(idx)}
-                      style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                    >
-                      <Trash size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* Section 6: InternshipForm Component */}
+            <InternshipForm
+              experiences={cvData.experience || []}
+              onAddExperience={handleAddExperience}
+              onRemoveExperience={handleRemoveExperience}
+            />
 
-            {/* Section 6: Grades showcasing */}
+            {/* Section 7: CertForm Component */}
+            <CertForm
+              certifications={cvData.certifications || []}
+              onAddCert={handleAddCert}
+              onRemoveCert={handleRemoveCert}
+            />
+
+            {/* Section 8: Grades Showcase */}
             <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <GraduationCap size={18} />
-                <span>6. Hiển thị kết quả môn học đã matched (Từ CSDL Supabase)</span>
+                <span>8. Hiển thị kết quả môn học đã matched (Từ CSDL Supabase)</span>
               </h3>
               <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '8px' }}>
                 Chọn các môn học đã được AI khớp với JD để hiển thị vào CV ứng tuyển:
@@ -633,11 +717,17 @@ export const CVBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Section 7: Activities */}
+            {/* Section 9: SkillRadarChart Component */}
+            <SkillRadarChart
+              grades={cvData.grades}
+              selectedGrades={selectedGrades}
+            />
+
+            {/* Section 10: Activities */}
             <div style={{ paddingBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkle size={18} />
-                <span>7. Hoạt động ngoại khóa</span>
+                <span>10. Hoạt động ngoại khóa</span>
               </h3>
               <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                 <input 
@@ -722,12 +812,48 @@ export const CVBuilder: React.FC = () => {
                       <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginTop: '2px' }}>Vai trò: {proj.role}</div>
                       <p style={{ fontSize: '0.75rem', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>{proj.description}</p>
                       <div className="cv-pdf-project-tech">
-                        Công nghệ: {proj.technologies.join(', ')}
+                        Công nghệ: {Array.isArray(proj.technologies) ? proj.technologies.join(', ') : proj.technologies}
                       </div>
                     </div>
                   ))}
                 </div>
               </div>
+
+              {/* Internship Experience (Live Preview A4) */}
+              {cvData.experience && cvData.experience.length > 0 && (
+                <div className="cv-pdf-section">
+                  <div className="cv-pdf-section-title">Kinh nghiệm thực tập & làm việc</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
+                    {cvData.experience.map((exp, idx) => (
+                      <div key={idx} style={{ padding: '6px 10px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '4px' }}>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0F172A' }}>{exp.company}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: 600 }}>
+                          {exp.role} {exp.period ? `(${exp.period})` : ''}
+                        </div>
+                        {exp.description && (
+                          <p style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px', lineHeight: '1.4' }}>
+                            {exp.description}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Certifications (Live Preview A4) */}
+              {cvData.certifications && cvData.certifications.length > 0 && (
+                <div className="cv-pdf-section">
+                  <div className="cv-pdf-section-title">Chứng chỉ & Bằng cấp</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
+                    {cvData.certifications.map((cert, idx) => (
+                      <span key={idx} className="cv-tag">
+                        {cert.certificationName} {cert.date ? `(${cert.date})` : ''}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Academic results (Autofilled from database) */}
               <div className="cv-pdf-section">
