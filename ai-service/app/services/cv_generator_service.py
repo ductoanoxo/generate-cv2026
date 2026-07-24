@@ -1,0 +1,256 @@
+import re
+import json
+import asyncio
+import logging
+from typing import Dict, Any, Optional
+import httpx
+
+from app.config import settings
+from app.models.prompts import CV_SYSTEM_PROMPT, build_cv_user_prompt
+
+logger = logging.getLogger(__name__)
+
+# Required top-level keys in a valid CV JSON response
+REQUIRED_CV_KEYS = {"personal_info", "education", "skills", "projects"}
+
+# Max retries for LLM API calls
+MAX_LLM_RETRIES = 2
+
+
+class CVGeneratorService:
+    """
+    CV Generator Service — Ngày 7
+    Sử dụng LLM (Gemini / OpenAI) để sinh CV JSON từ Competency Profile.
+    Khi LLM không khả dụng → fallback sang deterministic engine.
+    """
+
+    def __init__(self):
+        pass
+
+    def _clean_json_text(self, text: str) -> str:
+        """Strip markdown codeblock wrappers if LLM returns ```json ... ```."""
+        text = text.strip()
+        if text.startswith("```"):
+            text = re.sub(r"^```[a-zA-Z]*\n?", "", text)
+            text = re.sub(r"\n?```$", "", text)
+        return text.strip()
+
+    def _validate_cv_schema(self, cv_json: dict) -> bool:
+        """Validate that LLM response contains all required top-level keys."""
+        return REQUIRED_CV_KEYS.issubset(cv_json.keys())
+
+    # ── Fallback Engine ────────────────────────────────────────
+    def generate_fallback_cv(self, profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Generate a deterministic, high-quality CV JSON directly from competency profile
+        when LLM API key is not configured or LLM service is unreachable.
+        """
+        student = profile.get("student", {})
+        target_job = profile.get("target_job", {})
+        selected_courses = profile.get("selected_courses", [])
+        projects = profile.get("projects", [])
+        competency_summary = profile.get("competency_summary", {})
+
+        job_title = target_job.get("job_title", "Software Engineer")
+        student_name = student.get("full_name", "Sinh viên Tây Đô")
+
+        # Build relevant courses (top 4 by grade)
+        sorted_courses = sorted(selected_courses, key=lambda c: c.get("grade", 0), reverse=True)
+        relevant_courses = []
+        for c in sorted_courses[:4]:
+            grade_val = c.get("grade", 8.0)
+            clos = c.get("clos", [])
+            relevant_courses.append({
+                "name": c.get("course_name", "Học phần"),
+                "grade": f"{grade_val:.1f}/10",
+                "highlights": clos[:2] if clos else ["Hoàn thành tốt các đồ án và kiến thức môn học."],
+            })
+
+        # Build technical skills (only confidence >= 0.6)
+        tech_skills = [
+            t["skill"]
+            for t in competency_summary.get("technical_skills", [])
+            if t.get("confidence", 0) >= 0.6
+        ]
+        if not tech_skills:
+            tech_skills = target_job.get("required_skills", ["C#", "SQL", "HTML/CSS"])
+
+        # Build tools from project technologies
+        all_techs = set()
+        for p in projects:
+            for t in p.get("technologies", []):
+                all_techs.add(t)
+        tools = list({"Git", "VS Code", "Postman"} | (all_techs & {"Docker", "Kubernetes", "Nginx", "Swagger", "Figma"}))
+
+        # Build projects with dynamic highlights
+        formatted_projects = []
+        for p in projects:
+            techs = p.get("technologies", [])
+            tech_str = ", ".join(techs[:3]) if techs else "các công nghệ hiện đại"
+            highlights = [
+                f"Thiết kế và triển khai các tính năng core sử dụng {tech_str}.",
+                f"Đảm bảo chất lượng mã nguồn, viết documentation và tối ưu hiệu năng hệ thống.",
+            ]
+            if p.get("github_url"):
+                highlights.append(f"Mã nguồn mở trên GitHub: {p['github_url']}")
+            formatted_projects.append({
+                "name": p.get("project_name", "Dự án cá nhân"),
+                "role": p.get("role", job_title),
+                "description": p.get("description", "Xây dựng ứng dụng hoàn chỉnh đáp ứng yêu cầu thực tế."),
+                "technologies": techs,
+                "highlights": highlights,
+            })
+
+        cv_json = {
+            "personal_info": {
+                "full_name": student_name,
+                "title": job_title,
+                "email": student.get("email") or f"{student.get('student_id', 'sv').lower()}@taydo.edu.vn",
+                "phone": student.get("phone") or student.get("phoneNumber") or "0909-xxx-xxx",
+                "summary": (
+                    f"Sinh viên ngành {student.get('major', 'Công nghệ thông tin')} "
+                    f"chuyên ngành {student.get('specialization', 'Kỹ thuật phần mềm')}, "
+                    f"định hướng phát triển trở thành {job_title} chuyên nghiệp. "
+                    f"Nền tảng kiến thức vững chắc với GPA {student.get('overall_gpa', 3.2):.2f}/4.0, "
+                    f"có kinh nghiệm thực tế qua {len(projects)} dự án cá nhân "
+                    f"và {len(selected_courses)} học phần chuyên ngành liên quan."
+                ),
+            },
+            "education": {
+                "institution": "Trường Cao Đẳng Tây Đô",
+                "major": f"{student.get('major', 'CNTT')} - {student.get('specialization', 'Kỹ thuật phần mềm')}",
+                "gpa": f"{student.get('overall_gpa', 3.2):.2f}/4.0 ({student.get('overall_percentage', 8.0):.1f}/10)",
+                "graduation_year": student.get("graduation_year") or student.get("academic_year", "2026")[-4:],
+                "relevant_courses": relevant_courses,
+            },
+            "skills": {
+                "technical": tech_skills,
+                "tools": sorted(tools),
+                "soft": competency_summary.get("soft_skills", [
+                    "Tư duy logic & Giải quyết vấn đề",
+                    "Làm việc nhóm & Giao tiếp",
+                ]),
+            },
+            "projects": formatted_projects,
+            "certifications": [],
+            "languages": [
+                "Tiếng Việt (Tiếng mẹ đẻ)",
+                "Tiếng Anh (Đọc hiểu tài liệu kỹ thuật)",
+            ],
+        }
+        return cv_json
+
+    # ── LLM API Callers ────────────────────────────────────────
+    async def _call_openai_llm(self, prompt: str) -> Optional[str]:
+        """Call OpenAI API. Skips OpenRouter keys (sk-or-*) which are for embedding only."""
+        if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-or-"):
+            return None
+
+        url = "https://api.openai.com/v1/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": settings.LLM_MODEL if not settings.GEMINI_API_KEY else "gpt-3.5-turbo",
+            "messages": [
+                {"role": "system", "content": CV_SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+            "temperature": 0.3,
+            "response_format": {"type": "json_object"},
+        }
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.post(url, headers=headers, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                return data["choices"][0]["message"]["content"]
+            else:
+                logger.warning(f"OpenAI API returned status {resp.status_code}: {resp.text[:200]}")
+                return None
+
+    async def _call_gemini_llm(self, prompt: str) -> Optional[str]:
+        """Call Gemini API using the model specified in settings.LLM_MODEL."""
+        if not settings.GEMINI_API_KEY:
+            return None
+
+        model_name = settings.LLM_MODEL or "gemini-2.5-flash"
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={settings.GEMINI_API_KEY}"
+        payload = {
+            "system_instruction": {
+                "parts": [{"text": CV_SYSTEM_PROMPT}],
+            },
+            "contents": [
+                {"parts": [{"text": prompt}]},
+            ],
+            "generationConfig": {
+                "temperature": 0.2,
+                "response_mime_type": "application/json",
+            },
+        }
+
+        async with httpx.AsyncClient(timeout=45.0) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code == 200:
+                data = resp.json()
+                text = data["candidates"][0]["content"]["parts"][0]["text"]
+                return text
+            else:
+                logger.warning(f"Gemini API ({model_name}) returned status {resp.status_code}: {resp.text[:200]}")
+                return None
+
+    async def _call_with_retry(self, call_fn, prompt: str) -> Optional[str]:
+        """Retry wrapper for LLM API calls."""
+        for attempt in range(MAX_LLM_RETRIES):
+            try:
+                result = await call_fn(prompt)
+                if result:
+                    return result
+            except httpx.TimeoutException:
+                logger.warning(f"LLM timeout on attempt {attempt + 1}/{MAX_LLM_RETRIES}")
+            except Exception as e:
+                logger.warning(f"LLM error on attempt {attempt + 1}/{MAX_LLM_RETRIES}: {e}")
+            if attempt < MAX_LLM_RETRIES - 1:
+                await asyncio.sleep(1.0)
+        return None
+
+    # ── Main Entry Point ───────────────────────────────────────
+    async def generate_cv(self, competency_profile: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Main method to generate structured CV JSON from Competency Profile.
+        Priority: Gemini → OpenAI → Deterministic Fallback.
+        """
+        user_prompt = build_cv_user_prompt(competency_profile)
+        raw_json_str = None
+
+        # 1. Try Gemini API with retry
+        if settings.GEMINI_API_KEY:
+            raw_json_str = await self._call_with_retry(self._call_gemini_llm, user_prompt)
+
+        # 2. Try OpenAI API with retry
+        if not raw_json_str and settings.OPENAI_API_KEY:
+            raw_json_str = await self._call_with_retry(self._call_openai_llm, user_prompt)
+
+        # 3. Parse & validate LLM JSON result
+        if raw_json_str:
+            try:
+                cleaned = self._clean_json_text(raw_json_str)
+                cv_json = json.loads(cleaned)
+                if self._validate_cv_schema(cv_json):
+                    logger.info("Successfully generated and validated CV JSON via LLM.")
+                    return cv_json
+                else:
+                    missing = REQUIRED_CV_KEYS - set(cv_json.keys())
+                    logger.error(f"LLM response missing required keys: {missing}. Falling back...")
+            except json.JSONDecodeError as e:
+                logger.error(f"Failed to parse LLM response JSON: {e}. Falling back...")
+            except Exception as e:
+                logger.error(f"Unexpected error processing LLM response: {e}. Falling back...")
+
+        # 4. Deterministic fallback generator
+        logger.info("Using Deterministic Fallback CV Generator.")
+        return self.generate_fallback_cv(competency_profile)
+
+
+cv_generator_service = CVGeneratorService()
