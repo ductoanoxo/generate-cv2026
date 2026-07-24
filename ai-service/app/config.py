@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str | None = None
     
     OPENAI_API_KEY: str | None = None
+    COHERE_API_KEY: str | None = None
+    GITHUB_TOKEN: str | None = None
     DATABASE_URL: str | None = None
 
     model_config = SettingsConfigDict(

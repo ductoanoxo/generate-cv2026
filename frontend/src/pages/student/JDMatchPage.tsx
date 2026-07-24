@@ -4,6 +4,7 @@ import { JDInputForm } from '../../components/JDInputForm';
 import { MatchedCoursesTable, type MatchedCourse, type ComponentScore } from '../../components/MatchedCoursesTable';
 import { useAuth } from '../../context/AuthContext';
 import { supabase } from '../../utils/supabaseClient';
+import { searchCourses, type SearchResultItem } from '../../services/aiService';
 import { Sparkle, ArrowRight, CheckCircle, FileText } from '@phosphor-icons/react';
 
 interface SemesterScoreResponse {
@@ -95,7 +96,7 @@ export const JDMatchPage: React.FC = () => {
     });
   }, [user]);
 
-  // JD Analysis & Subject Matching logic
+  // JD Analysis & Subject Matching logic (Vector Search via AI Service)
   const handleAnalyzeJD = async (inputJdText: string, uploadedFileName?: string) => {
     setJdText(inputJdText);
     setFileName(uploadedFileName);
@@ -103,102 +104,63 @@ export const JDMatchPage: React.FC = () => {
     setErrorMsg(null);
 
     try {
+      // 1. Fetch vector search results from AI Service
+      const searchResult = await searchCourses({
+        query: inputJdText,
+        limit: 20,
+        use_rerank: false
+      });
+
+      if (!searchResult.results || searchResult.results.length === 0) {
+        setErrorMsg('Không tìm thấy môn học phù hợp từ AI Search. Thử lại với mô tả JD khác.');
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Fetch student scores for GPA display
       let subjectsToMatch = rawSubjects;
       if (subjectsToMatch.length === 0) {
         subjectsToMatch = await fetchStudentScoresFromDB();
         setRawSubjects(subjectsToMatch);
       }
 
-      if (subjectsToMatch.length === 0) {
-        setErrorMsg('Không thể kết nối cơ sở dữ liệu để lấy danh sách môn học sinh viên.');
-        setIsLoading(false);
-        return;
-      }
-
-      // Keyword mapping rules for JD matching
-      const jdLower = inputJdText.toLowerCase();
-
-      const matched: MatchedCourse[] = subjectsToMatch.map(sub => {
-        const nameLower = sub.subjectName.toLowerCase();
-        let hits: string[] = [];
-        let scoreBonus = 0;
-
-        // Domain specific keyword checks
-        if ((jdLower.includes('react') || jdLower.includes('web') || jdLower.includes('frontend') || jdLower.includes('css') || jdLower.includes('html')) &&
-            (nameLower.includes('web') || nameLower.includes('giao diện') || nameLower.includes('html'))) {
-          hits.push('Lập trình Web', 'Frontend UI', 'React.js / HTML CSS');
-          scoreBonus += 35;
-        }
-
-        if ((jdLower.includes('c#') || jdLower.includes('.net') || jdLower.includes('lập trình c') || jdLower.includes('backend') || jdLower.includes('c/c++')) &&
-            (nameLower.includes('lập trình c') || nameLower.includes('c#') || nameLower.includes('.net'))) {
-          hits.push('C# / .NET Core', 'Kỹ thuật Lập trình C', 'Cấu trúc Lập trình');
-          scoreBonus += 30;
-        }
-
-        if ((jdLower.includes('sql') || jdLower.includes('database') || jdLower.includes('cơ sở dữ liệu') || jdLower.includes('postgresql') || jdLower.includes('truy vấn')) &&
-            (nameLower.includes('cơ sở dữ liệu') || nameLower.includes('sql') || nameLower.includes('database'))) {
-          hits.push('Cơ sở dữ liệu SQL', 'Thiết kế Database', 'Tối ưu truy vấn');
-          scoreBonus += 30;
-        }
-
-        if ((jdLower.includes('phân tích') || jdLower.includes('thiết kế hệ thống') || jdLower.includes('kiến trúc') || jdLower.includes('phần mềm') || jdLower.includes('software')) &&
-            (nameLower.includes('phân tích') || nameLower.includes('kỹ thuật phần mềm') || nameLower.includes('thiết kế hệ thống'))) {
-          hits.push('Phân tích & Thiết kế hệ thống', 'Kỹ thuật phần mềm', 'Quy trình Agile/Scrum');
-          scoreBonus += 28;
-        }
-
-        if ((jdLower.includes('bảo mật') || jdLower.includes('security') || jdLower.includes('mạng') || jdLower.includes('network')) &&
-            (nameLower.includes('bảo mật') || nameLower.includes('mạng') || nameLower.includes('an toàn'))) {
-          hits.push('An toàn & Bảo mật thông tin', 'Quản trị mạng');
-          scoreBonus += 25;
-        }
-
-        // Generic word token overlap check
-        const jdWords = jdLower.split(/[\s,.\-\/\(\)]+/).filter((w: string) => w.length > 2);
-        const nameWords = nameLower.split(/[\s,.\-\/\(\)]+/).filter((w: string) => w.length > 2);
-        
-        let tokenMatches = 0;
-        nameWords.forEach((nw: string) => {
-          if (jdWords.includes(nw)) {
-            tokenMatches++;
-            if (!hits.includes(nw)) hits.push(nw);
-          }
-        });
-
-        scoreBonus += tokenMatches * 10;
-
-        // Base match calculation
-        let calculatedMatch = Math.min(98, Math.max(45, 55 + scoreBonus));
-
-        // If no direct hits, assign a baseline relevance based on software major relevance
-        if (hits.length === 0) {
-          hits = ['Tư duy lập trình', 'Kỹ năng phần mềm core'];
-          calculatedMatch = Math.floor(50 + Math.random() * 15);
-        }
-
-        return {
-          subjectCode: sub.subjectCode,
-          subjectName: sub.subjectName,
-          creditPoint: sub.creditPoint,
-          combinedResult: sub.combinedResult,
-          gradeC: sub.gradeC || 'B',
-          grade4: sub.grade4 || 3,
-          matchPercentage: calculatedMatch,
-          matchedKeywords: Array.from(new Set(hits)),
-          relevanceReason: `Môn học đáp ứng ${hits.length} tiêu chí kỹ năng theo mô tả công việc JD.`,
-          components: sub.components || []
-        };
+      // 3. Build score lookup from student's actual scores
+      const scoreMap = new Map<string, any>();
+      subjectsToMatch.forEach(sub => {
+        scoreMap.set(sub.subjectCode, sub);
       });
 
-      // Sort by match percentage descending
-      matched.sort((a, b) => b.matchPercentage - a.matchPercentage);
+      // 4. Map AI search results to MatchedCourse format
+      const matched: MatchedCourse[] = searchResult.results
+        .filter((r: SearchResultItem) => r.type === 'subject')
+        .map((r: SearchResultItem) => {
+          const p = r as any;
+          const studentScore = scoreMap.get(p.subject_code);
+
+          return {
+            subjectCode: p.subject_code,
+            subjectName: p.subject_name,
+            creditPoint: studentScore?.creditPoint || 3,
+            combinedResult: studentScore?.combinedResult ?? null,
+            gradeC: studentScore?.gradeC || '-',
+            grade4: studentScore?.grade4 || 0,
+            matchPercentage: Math.round(r.score * 100),
+            matchedKeywords: [p.department || 'AI Semantic Match'],
+            relevanceReason: `Độ chính xác ${(r.score * 100).toFixed(1)}% theo AI Vector Search (COSINE)`,
+            components: studentScore?.components || []
+          };
+        })
+        .sort((a: MatchedCourse, b: MatchedCourse) => b.matchPercentage - a.matchPercentage);
 
       setMatchedCourses(matched);
       setActiveStep(2);
-    } catch (err) {
-      setErrorMsg('Xảy ra lỗi trong quá trình xử lý khớp môn học.');
-      console.error(err);
+    } catch (err: any) {
+      console.error('AI Search error:', err);
+      if (err?.response?.status === 503 || err?.code === 'ECONNREFUSED') {
+        setErrorMsg('AI Service (Qdrant) chưa khả dụng. Vui lòng thử lại sau.');
+      } else {
+        setErrorMsg('Xảy ra lỗi trong quá trình tìm kiếm AI. Vui lòng thử lại.');
+      }
     } finally {
       setIsLoading(false);
     }

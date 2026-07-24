@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import health, parse_jd, embed
+from app.routers import health, parse_jd, embed, search, scrape_github
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -24,6 +24,8 @@ app.add_middleware(
 app.include_router(health.router)
 app.include_router(parse_jd.router)
 app.include_router(embed.router)
+app.include_router(search.router)
+app.include_router(scrape_github.router)
 
 
 
