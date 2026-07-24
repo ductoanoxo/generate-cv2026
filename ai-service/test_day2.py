@@ -4,6 +4,7 @@ import unittest
 
 sys.path.insert(0, os.path.abspath(os.path.dirname(__file__)))
 
+from app.config import settings
 from app.services.jd_parser_service import jd_parser_service
 from app.services.embedding_service import embedding_service
 from scripts.seed_vectors import seed_qdrant, COLLECTION_NAME
@@ -13,7 +14,7 @@ class TestDay2Pipeline(unittest.TestCase):
     
     def test_01_jd_parser_service(self):
         print("\n--- Testing 1. JD Parser Service ---")
-        docx_path = "/home/traductoan/generate-cv/CLO/ChuongTrinh_AnToanBaoMatThongTin.docx"
+        docx_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "CLO", "ChuongTrinh_AnToanBaoMatThongTin.docx"))
         self.assertTrue(os.path.exists(docx_path), f"File {docx_path} does not exist.")
         
         parsed_md = jd_parser_service.parse_file(docx_path, filename="ChuongTrinh_AnToanBaoMatThongTin.docx")
@@ -31,12 +32,23 @@ class TestDay2Pipeline(unittest.TestCase):
 
     def test_03_seed_qdrant(self):
         print("\n--- Testing 3. Seed Qdrant Vectors ---")
-        seed_qdrant("http://localhost:6333")
-        
-        client = QdrantClient(url="http://localhost:6333")
-        collection_info = client.get_collection(collection_name=COLLECTION_NAME)
-        print(f"Qdrant collection '{COLLECTION_NAME}' point count: {collection_info.points_count}")
-        self.assertGreater(collection_info.points_count, 0, "Qdrant collection should contain points.")
+        client = QdrantClient(url=settings.QDRANT_URL, api_key=settings.QDRANT_API_KEY)
+        try:
+            collection_info = client.get_collection(collection_name=COLLECTION_NAME)
+            point_count = collection_info.points_count
+        except Exception:
+            point_count = 0
+
+        if point_count == 0:
+            print("Collection is empty or does not exist, running seed...")
+            seed_qdrant(settings.QDRANT_URL)
+            collection_info = client.get_collection(collection_name=COLLECTION_NAME)
+            point_count = collection_info.points_count
+        else:
+            print(f"Collection '{COLLECTION_NAME}' already has {point_count} points, skipping seed.")
+            
+        print(f"Qdrant collection '{COLLECTION_NAME}' point count: {point_count}")
+        self.assertGreater(point_count, 0, "Qdrant collection should contain points.")
 
         # Perform a search query to verify Qdrant vector search
         query_text = "lập trình web và giao diện"

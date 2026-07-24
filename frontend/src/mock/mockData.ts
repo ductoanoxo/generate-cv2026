@@ -401,14 +401,26 @@ export const studentStats = {
 };
 
 // CV Generation System
+export interface Certification {
+  certificationName: string;
+  date: string;
+}
+
+export interface Experience {
+  company: string;
+  role: string;
+  period: string;
+  description: string;
+}
+
 export interface CVData {
   profile: Student;
   summary: string;
   skills: string[];
   languages: string[];
   projects: { name: string; description: string; role: string; technologies: string[] }[];
-  certifications: string[];
-  experience?: { company: string; role: string; period: string; description: string }[];
+  certifications: Certification[];
+  experience: Experience[];
   grades: { subjectName: string; score: number; credits: number }[];
   activities: string[];
 }
@@ -435,7 +447,15 @@ export const defaultCVData: CVData = {
   certifications: [
     { certificationName: 'Chứng chỉ Lập trình Web Full-stack (F8)', date: '2025' },
     { certificationName: 'Toeic 650', date: '2025' }
-  ] as any, // dynamic array
+  ],
+  experience: [
+    {
+      company: 'Công ty TNHH Phần mềm XYZ',
+      role: 'Intern Frontend Developer',
+      period: '06/2025 - 08/2025',
+      description: 'Tham gia phát triển giao diện web bằng React.js, fix bug và hỗ trợ đội frontend.'
+    }
+  ],
   activities: [
     'Thành viên câu lạc bộ Tin học Trường Cao đẳng Tây Đô.',
     'Tình nguyện viên chiến dịch Mùa hè xanh năm 2025.'
@@ -447,3 +467,4 @@ export const defaultCVData: CVData = {
     { subjectName: 'Phân tích và thiết kế hệ thống', score: 8.2, credits: 3 }
   ]
 };
+

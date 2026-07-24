@@ -116,6 +116,8 @@ namespace backend.Services
                 .ToListAsync();
 
             var resultList = new List<StudentSemesterScoreDto>();
+            var processedTeachingIds = new HashSet<Guid>();
+
             foreach (var semester in semesters)
             {
                 var startDateUtc = DateTime.SpecifyKind(semester.StartDate, DateTimeKind.Utc);
@@ -123,14 +125,22 @@ namespace backend.Services
 
                 // Filter exam results for the current semester in-memory
                 var semesterResults = allExamResults
-                    .Where(er => er.SubjectTeachingExam.SubjectTeaching.StartDate >= startDateUtc
+                    .Where(er => !processedTeachingIds.Contains(er.SubjectTeachingExam.SubjectTeachingId)
+                        && er.SubjectTeachingExam.SubjectTeaching.StartDate >= startDateUtc
                         && er.SubjectTeachingExam.SubjectTeaching.EndDate <= endDateUtc
                         && (facultyId == null || er.SubjectTeachingExam.SubjectTeaching.Subject.FacultyId == facultyId))
                     .ToList();
 
+                // Mark processed teaching IDs to prevent duplicate rendering across overlapping semesters
+                foreach (var er in semesterResults)
+                {
+                    processedTeachingIds.Add(er.SubjectTeachingExam.SubjectTeachingId);
+                }
+
                 var subjectGroups = semesterResults
                     .GroupBy(er => er.SubjectTeachingExam.SubjectTeaching.Subject.SubjectCode)
                     .ToList();
+
 
                 var subjectScores = new List<StudentSubjectScoreDto>();
                 foreach (var group in subjectGroups)
