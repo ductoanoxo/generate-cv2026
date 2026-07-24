@@ -15,7 +15,8 @@ import {
   SignOut,
   User as UserIcon,
   Notebook,
-  Megaphone
+  Megaphone,
+  MagnifyingGlass
 } from '@phosphor-icons/react';
 
 interface DashboardLayoutProps {
@@ -151,6 +152,10 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
               <NavLink to="/student/cv" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
                 <FileText size={20} />
                 <span>Tạo CV Cá Nhân</span>
+              </NavLink>
+              <NavLink to="/student/jd-match" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+                <MagnifyingGlass size={20} />
+                <span>AI Search Môn Học</span>
               </NavLink>
 
             </>
