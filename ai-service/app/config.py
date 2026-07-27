@@ -11,9 +11,13 @@ class Settings(BaseSettings):
     QDRANT_API_KEY: str | None = None
     
     OPENAI_API_KEY: str | None = None
+    GEMINI_API_KEY: str | None = None
     COHERE_API_KEY: str | None = None
     GITHUB_TOKEN: str | None = None
     DATABASE_URL: str | None = None
+    
+    LLM_MODEL: str = "gemini-2.5-flash"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
 
     model_config = SettingsConfigDict(
         env_file=".env",
