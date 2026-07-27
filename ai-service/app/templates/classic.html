@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: A4;
+    margin: 0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Times New Roman', 'Georgia', 'Palatino', serif;
+    font-size: 11pt;
+    line-height: 1.5;
+    color: #2d2d2d;
+    background: #ffffff;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 30mm 25mm 20mm;
+  }
+  .header {
+    text-align: center;
+    border-bottom: 2px solid #1a1a1a;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
+  .header .name {
+    font-size: 20pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .header .major {
+    font-size: 12pt;
+    color: #555;
+    margin-top: 4px;
+  }
+  .header .contact {
+    font-size: 10pt;
+    color: #555;
+    margin-top: 6px;
+  }
+  .header .contact span {
+    margin: 0 8px;
+  }
+  .section {
+    margin-bottom: 14px;
+  }
+  .section-title {
+    font-size: 12pt;
+    font-weight: 700;
+    color: #1a1a1a;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid #999;
+    padding-bottom: 2px;
+    margin-bottom: 8px;
+  }
+  .summary-text {
+    font-size: 10.5pt;
+    color: #444;
+    text-align: justify;
+    margin-bottom: 4px;
+  }
+  .skills-list {
+    font-size: 10.5pt;
+    color: #444;
+  }
+  .skills-list span {
+    display: inline-block;
+  }
+  .skills-list span:not(:last-child)::after {
+    content: "  •  ";
+    color: #888;
+  }
+  .project-item, .exp-item {
+    margin-bottom: 10px;
+  }
+  .project-name {
+    font-weight: 700;
+    font-size: 11pt;
+  }
+  .project-role {
+    font-style: italic;
+    color: #555;
+  }
+  .project-desc {
+    font-size: 10pt;
+    color: #444;
+    margin-top: 1px;
+  }
+  .project-tech {
+    font-size: 9.5pt;
+    color: #666;
+    margin-top: 1px;
+  }
+  .exp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .exp-company {
+    font-weight: 700;
+    font-size: 11pt;
+  }
+  .exp-period {
+    font-size: 10pt;
+    color: #666;
+    font-style: italic;
+  }
+  .exp-role {
+    font-style: italic;
+    color: #555;
+    font-size: 10.5pt;
+  }
+  .exp-desc {
+    font-size: 10pt;
+    color: #444;
+    margin-top: 2px;
+  }
+  .grade-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 10.5pt;
+    margin-top: 4px;
+  }
+  .grade-table th {
+    background: #f5f5f5;
+    font-weight: 700;
+    padding: 4px 8px;
+    text-align: left;
+    border-bottom: 1px solid #ccc;
+  }
+  .grade-table td {
+    padding: 3px 8px;
+    border-bottom: 1px solid #eee;
+  }
+  .grade-table td:last-child {
+    text-align: center;
+  }
+  .grade-table td:nth-child(2) {
+    text-align: center;
+  }
+  .cert-item {
+    font-size: 10.5pt;
+    color: #444;
+    margin-bottom: 3px;
+  }
+  .activity-item {
+    font-size: 10pt;
+    color: #444;
+    margin-bottom: 3px;
+    padding-left: 16px;
+    position: relative;
+  }
+  .activity-item::before {
+    content: "–";
+    position: absolute;
+    left: 4px;
+  }
+  .lang-item {
+    font-size: 10.5pt;
+    color: #444;
+    margin-bottom: 2px;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div class="name">{{ profile.fullName }}</div>
+    <div class="major">{{ profile.major }}</div>
+    <div class="contact">
+      <span>📧 {{ profile.email }}</span>
+      <span>📞 {{ profile.phoneNumber }}</span>
+      {% if profile.birthDate %}<span>🎂 {{ profile.birthDate }}</span>{% endif %}
+      {% if profile.gender %}<span>👤 {{ profile.gender }}</span>{% endif %}
+    </div>
+  </div>
+
+  {% if summary %}
+  <div class="section">
+    <div class="section-title">Mục tiêu nghề nghiệp</div>
+    <p class="summary-text">{{ summary }}</p>
+  </div>
+  {% endif %}
+
+  <div class="section">
+    <div class="section-title">Thông tin cá nhân</div>
+    <table style="width:100%;font-size:10.5pt;color:#444;">
+      {% if profile.faculty %}
+      <tr><td style="width:100px;font-weight:600;">Khoa</td><td>{{ profile.faculty }}</td></tr>
+      {% endif %}
+      {% if profile.major %}
+      <tr><td style="font-weight:600;">Ngành</td><td>{{ profile.major }}</td></tr>
+      {% endif %}
+      {% if profile.academicYear %}
+      <tr><td style="font-weight:600;">Khóa</td><td>{{ profile.academicYear }}</td></tr>
+      {% endif %}
+      {% if profile.gpa %}
+      <tr><td style="font-weight:600;">GPA</td><td>{{ "%.2f"|format(profile.gpa) }}</td></tr>
+      {% endif %}
+    </table>
+  </div>
+
+  {% if skills %}
+  <div class="section">
+    <div class="section-title">Kỹ năng</div>
+    <div class="skills-list">
+      {% for skill in skills %}
+      <span>{{ skill }}</span>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if languages %}
+  <div class="section">
+    <div class="section-title">Ngôn ngữ</div>
+    {% for lang in languages %}
+    <div class="lang-item">{{ lang }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if grades %}
+  <div class="section">
+    <div class="section-title">Kết quả học tập</div>
+    <table class="grade-table">
+      <thead>
+        <tr>
+          <th>Môn học</th>
+          <th style="width:70px">Điểm</th>
+          <th style="width:50px">TC</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for g in grades %}
+        <tr>
+          <td>{{ g.subjectName }}</td>
+          <td>{{ "%.1f"|format(g.score) }}</td>
+          <td>{{ g.credits }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if projects %}
+  <div class="section">
+    <div class="section-title">Dự án</div>
+    {% for p in projects %}
+    <div class="project-item">
+      <div class="project-name">{{ p.name }}</div>
+      <div class="project-role">{{ p.role }}</div>
+      <div class="project-desc">{{ p.description }}</div>
+      {% if p.technologies %}
+      <div class="project-tech">
+        <strong>Công nghệ:</strong>
+        {% for tech in p.technologies %}{{ tech }}{% if not loop.last %}, {% endif %}{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if experience %}
+  <div class="section">
+    <div class="section-title">Kinh nghiệm làm việc</div>
+    {% for e in experience %}
+    <div class="exp-item">
+      <div class="exp-header">
+        <span class="exp-company">{{ e.company }}</span>
+        <span class="exp-period">{{ e.period }}</span>
+      </div>
+      <div class="exp-role">{{ e.role }}</div>
+      {% if e.description %}
+      <div class="exp-desc">{{ e.description }}</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if certifications %}
+  <div class="section">
+    <div class="section-title">Chứng chỉ</div>
+    {% for c in certifications %}
+    <div class="cert-item">
+      <strong>{{ c.certificationName }}</strong>
+      {% if c.date %} ({{ c.date }}){% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if activities %}
+  <div class="section">
+    <div class="section-title">Hoạt động</div>
+    {% for a in activities %}
+    <div class="activity-item">{{ a }}</div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>
