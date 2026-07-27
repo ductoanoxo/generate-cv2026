@@ -20,3 +20,53 @@ class PipelineStateSchema(BaseModel):
     ats_score: Optional[float] = None
     is_validated: bool = False
     error: Optional[str] = None
+
+
+class ProjectSchema(BaseModel):
+    name: str = ""
+    role: str = ""
+    description: str = ""
+    technologies: List[str] = []
+
+
+class CertificationSchema(BaseModel):
+    certificationName: str = ""
+    date: str = ""
+
+
+class ExperienceSchema(BaseModel):
+    company: str = ""
+    role: str = ""
+    period: str = ""
+    description: str = ""
+
+
+class GradeSchema(BaseModel):
+    subjectName: str = ""
+    score: float = 0.0
+    credits: int = 0
+
+
+class ProfileSchema(BaseModel):
+    fullName: str = ""
+    email: str = ""
+    phoneNumber: str = ""
+    gender: str = ""
+    birthDate: str = ""
+    faculty: str = ""
+    major: str = ""
+    academicYear: str = ""
+    gpa: float = 0.0
+    avatar: Optional[str] = None
+
+
+class CVDataSchema(BaseModel):
+    profile: ProfileSchema = Field(default_factory=ProfileSchema)
+    summary: str = ""
+    skills: List[str] = []
+    languages: List[str] = []
+    projects: List[ProjectSchema] = []
+    certifications: List[CertificationSchema] = []
+    experience: List[ExperienceSchema] = []
+    grades: List[GradeSchema] = []
+    activities: List[str] = []
