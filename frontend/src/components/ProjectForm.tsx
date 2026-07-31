@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { 
+import {
   FileText, 
   Plus, 
   Trash, 
@@ -8,7 +8,7 @@ import {
   Sparkle,
   Link as LinkIcon 
 } from '@phosphor-icons/react';
-import axios from 'axios';
+import { scrapeGithub } from '../services/aiService';
 
 export interface Project {
   name: string;
@@ -67,45 +67,22 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
     setScrapeStatusMessage('Đang kết nối GitHub & phân tích dữ liệu dự án...');
 
     try {
-      // Attempt call to backend AI scrape service
-      const response = await axios.post('http://localhost:8000/api/scrape-github', {
-        url: githubUrl.trim()
-      });
-
-      if (response.data) {
-        const { name, role, description, technologies } = response.data;
-        setNewProject({
-          name: name || 'Dự án từ GitHub',
-          role: role || 'Full-stack Developer',
-          description: description || 'Dự án open-source trích xuất từ GitHub.',
-          technologies: Array.isArray(technologies) ? technologies.join(', ') : (technologies || 'React, TypeScript')
-        });
-        setScrapeStatusMessage('✅ Đã trích xuất thông tin GitHub thành công!');
-      }
+      const response = await scrapeGithub({ github_url: githubUrl.trim() });
+      const technologies = Object.values(response.tech_stack || {}).flat().filter(Boolean);
+      const project = {
+        name: response.repo.name || response.repo.full_name || 'Dự án từ GitHub',
+        role: 'Full-stack Developer',
+        description: response.project_summary || response.repo.description || `Dự án GitHub: ${response.repo.full_name}`,
+        technologies: Array.from(new Set(technologies)),
+      };
+      setNewProject({ ...project, technologies: project.technologies.join(', ') });
+      onAddProject(project);
+      setScrapeStatusMessage('✅ Đã đọc GitHub thật và thêm dự án vào CV!');
     } catch (err) {
-      console.warn('Real AI Scrape API unavailable, triggering mock scraper...', err);
-
-      // Fallback Mock simulation after 1.5 seconds delay
-      setTimeout(() => {
-        const repoName = githubUrl.split('/').pop()?.replace('.git', '') || 'e-commerce-portal';
-        const formattedName = repoName
-          .split('-')
-          .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-
-        setNewProject({
-          name: formattedName || 'Dự án E-Commerce Portal',
-          role: 'Full-stack Developer',
-          description: 'Hệ thống website mua sắm & quản lý bán hàng trực tuyến tích hợp thanh toán, giỏ hàng tự động.',
-          technologies: 'React.js, TypeScript, Node.js, PostgreSQL, TailwindCSS'
-        });
-        setScrapeStatusMessage('✨ [Mock AI] Đã tự động phân tích và trích xuất dữ liệu từ GitHub Repo!');
-      }, 1500);
+      console.warn('GitHub scrape failed', err);
+      setScrapeStatusMessage('Không thể đọc repository GitHub. Kiểm tra URL hoặc thử lại.');
     } finally {
-      setTimeout(() => {
-        setIsScraping(false);
-        setTimeout(() => setScrapeStatusMessage(null), 3500);
-      }, 1500);
+      setIsScraping(false);
     }
   };
 
@@ -150,7 +127,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
             className="btn-icon-text primary" 
             onClick={handleScrapeGithub}
             disabled={isScraping}
-            style={{ padding: '0 16px', whitespace: 'nowrap', opacity: isScraping ? 0.7 : 1 }}
+            style={{ padding: '0 16px', whiteSpace: 'nowrap', opacity: isScraping ? 0.7 : 1 }}
           >
             {isScraping ? (
               <>

@@ -59,6 +59,7 @@ CATEGORY_MAP: Dict[str, List[str]] = {
 
 # Minimum number of category keywords that must appear in text for a category match
 CATEGORY_MATCH_MIN_KEYWORDS = 2
+GOOD_GRADE_THRESHOLD = 7.0
 
 DEFAULT_SOFT_SKILLS = [
     "Tư duy logic & Giải quyết vấn đề",
@@ -196,9 +197,6 @@ class CompetencyService:
             for keyword, label in SOFT_KEYWORDS.items():
                 if keyword in text:
                     found.add(label)
-        # Always include defaults that weren't already detected
-        for default in DEFAULT_SOFT_SKILLS:
-            found.add(default)
         return list(found)
 
     # ── Main Entry Point ───────────────────────────────────────
@@ -225,19 +223,24 @@ class CompetencyService:
                 f"{course.get('course_description', '')} "
                 f"{' '.join(course.get('clos', []))}"
             )
-            matched_skills = self._match_skills_for_item(required_skills, course_text)
+            grade = float(course.get("grade") or course.get("combinedResult") or 0)
+            # A course is evidence of a skill only when the student passed it
+            # with a good result and the CLO/description mentions that skill.
+            matched_skills = (
+                self._match_skills_for_item(required_skills, course_text)
+                if grade >= GOOD_GRADE_THRESHOLD else []
+            )
 
             c_dict = {
                 "course_id": course.get("course_id") or course.get("subjectCode", "CS101"),
                 "course_name": course.get("course_name") or course.get("subjectName", "Course"),
-                "grade": float(course.get("grade") or course.get("combinedResult") or 8.0),
+                "grade": grade,
+                "credit_point": int(course.get("credit_point") or course.get("creditPoint") or 3),
                 "similarity_score": round(
                     float(course.get("similarity_score") or (course.get("matchPercentage", 70) / 100.0)), 2
                 ),
                 "course_description": course.get("course_description") or f"Học phần {course.get('course_name', '')}",
-                "clos": course.get("clos") or course.get("matchedKeywords") or [
-                    "Hoàn thành các chuẩn đầu ra của học phần."
-                ],
+                "clos": course.get("clos") or course.get("matchedKeywords") or [],
                 "matched_skills": matched_skills,
             }
             processed_courses.append(c_dict)
@@ -269,25 +272,36 @@ class CompetencyService:
         # Compute Technical Skills Competency Summary
         technical_summary = []
         for skill in required_skills:
-            matching_courses = [c for c in processed_courses if skill in c["matched_skills"]]
+            matching_courses = [
+                c for c in processed_courses
+                if skill in c["matched_skills"] and c.get("grade", 0) >= GOOD_GRADE_THRESHOLD
+            ]
             matching_projects = [p for p in processed_projects if skill in p["matched_skills"]]
 
             conf_score, evidences = self._calculate_confidence(skill, matching_courses, matching_projects)
 
-            technical_summary.append({
-                "skill": skill,
-                "confidence": conf_score,
-                "evidence": evidences if evidences else ["Chương trình đào tạo Công nghệ thông tin"],
-            })
+            # Do not expose a JD keyword as a student skill without course CLO
+            # evidence or a real project proving it.
+            if matching_courses or matching_projects:
+                technical_summary.append({
+                    "skill": skill,
+                    "confidence": conf_score,
+                    "evidence": evidences,
+                })
 
         # Extract soft skills from course CLOs
-        soft_skills = self._extract_soft_skills(processed_courses)
+        soft_skills = self._extract_soft_skills([
+            c for c in processed_courses if c.get("grade", 0) >= GOOD_GRADE_THRESHOLD
+        ])
+        languages = [str(language).strip() for language in student_info.get("languages", []) if str(language).strip()]
 
         # Final Competency Profile Structure
         profile = {
             "student": {
                 "student_id": student_info.get("student_id") or student_info.get("username") or "SV001",
                 "full_name": student_info.get("full_name") or student_info.get("fullName") or "Sinh viên Tây Đô",
+                "email": student_info.get("email"),
+                "phone": student_info.get("phone") or student_info.get("phoneNumber"),
                 "major": student_info.get("major") or "Công nghệ thông tin",
                 "specialization": student_info.get("specialization") or "Kỹ thuật phần mềm",
                 "academic_year": student_info.get("academic_year") or "2022-2026",
@@ -300,6 +314,7 @@ class CompetencyService:
             },
             "selected_courses": processed_courses,
             "projects": processed_projects,
+            "languages": languages,
             "competency_summary": {
                 "technical_skills": technical_summary,
                 "soft_skills": soft_skills,

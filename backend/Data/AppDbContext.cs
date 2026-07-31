@@ -44,6 +44,7 @@ namespace backend.Data
         public DbSet<TeacherFaculty> TeacherFaculties { get; set; } = null!;
         public DbSet<UserAnnouncement> UserAnnouncements { get; set; } = null!;
         public DbSet<UserDevice> UserDevices { get; set; } = null!;
+        public DbSet<SavedCV> SavedCVs { get; set; } = null!;
         public DbSet<User> Users { get; set; } = null!;
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

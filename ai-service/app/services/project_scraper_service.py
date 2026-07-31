@@ -165,6 +165,12 @@ class ProjectScraperService:
         file_tree = await self.get_file_tree(owner, repo)
         tech_stack = self.detect_tech_stack(readme, file_tree)
         readme_sections = self.extract_sections_from_readme(readme)
+        summary_sections = [
+            content for heading, content in readme_sections.items()
+            if any(term in heading.lower() for term in ("about", "overview", "feature", "function", "result", "outcome"))
+        ]
+        project_summary = " ".join(summary_sections).strip() or readme.strip()
+        project_summary = " ".join(project_summary.split())[:1800]
 
         return {
             "status": "success",
@@ -189,6 +195,7 @@ class ProjectScraperService:
                 "full_text": readme[:10000] if readme else "",
                 "sections": readme_sections
             },
+            "project_summary": project_summary,
             "tech_stack": tech_stack,
             "file_tree": file_tree[:200]
         }

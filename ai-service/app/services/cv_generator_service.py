@@ -2,6 +2,7 @@ import re
 import json
 import asyncio
 import logging
+import copy
 from typing import Dict, Any, Optional
 import httpx
 
@@ -39,6 +40,28 @@ class CVGeneratorService:
         """Validate that LLM response contains all required top-level keys."""
         return REQUIRED_CV_KEYS.issubset(cv_json.keys())
 
+    def _ground_cv_in_profile(self, llm_cv: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply a deterministic evidence boundary after LLM generation.
+
+        The model may invent contact details, tools, courses, languages, or project
+        technologies.  Rebuilding the data-bearing sections from the competency
+        profile guarantees that only user/evidence-backed values reach the UI.
+        """
+        grounded = self.generate_fallback_cv(profile)
+        # Keep only presentation text from the model when it is safe to do so.
+        # The fallback summary is deliberately used because it is count- and
+        # contact-grounded and cannot claim unsupported experience.
+        if isinstance(llm_cv.get("projects"), list):
+            source_projects = profile.get("projects", [])
+            for index, project in enumerate(grounded.get("projects", [])):
+                if index < len(source_projects):
+                    source = source_projects[index]
+                    project["name"] = source.get("project_name", source.get("name", project["name"]))
+                    project["role"] = source.get("role", project["role"])
+                    project["description"] = source.get("description", project["description"])
+                    project["technologies"] = list(source.get("technologies", []))
+        return copy.deepcopy(grounded)
+
     # ── Fallback Engine ────────────────────────────────────────
     def generate_fallback_cv(self, profile: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -67,20 +90,18 @@ class CVGeneratorService:
             })
 
         # Build technical skills (only confidence >= 0.6)
-        tech_skills = [
+        competency_skills = [
             t["skill"]
             for t in competency_summary.get("technical_skills", [])
             if t.get("confidence", 0) >= 0.6
         ]
-        if not tech_skills:
-            tech_skills = target_job.get("required_skills", ["C#", "SQL", "HTML/CSS"])
 
-        # Build tools from project technologies
+        # Project technologies are evidence-backed skills, not placeholder tools.
         all_techs = set()
         for p in projects:
             for t in p.get("technologies", []):
                 all_techs.add(t)
-        tools = list({"Git", "VS Code", "Postman"} | (all_techs & {"Docker", "Kubernetes", "Nginx", "Swagger", "Figma"}))
+        tech_skills = list(dict.fromkeys(competency_skills + sorted(all_techs)))
 
         # Build projects with dynamic highlights
         formatted_projects = []
@@ -105,8 +126,8 @@ class CVGeneratorService:
             "personal_info": {
                 "full_name": student_name,
                 "title": job_title,
-                "email": student.get("email") or f"{student.get('student_id', 'sv').lower()}@taydo.edu.vn",
-                "phone": student.get("phone") or student.get("phoneNumber") or "0909-xxx-xxx",
+                "email": student.get("email") or "",
+                "phone": student.get("phone") or student.get("phoneNumber") or "",
                 "summary": (
                     f"Sinh viên ngành {student.get('major', 'Công nghệ thông tin')} "
                     f"chuyên ngành {student.get('specialization', 'Kỹ thuật phần mềm')}, "
@@ -125,34 +146,29 @@ class CVGeneratorService:
             },
             "skills": {
                 "technical": tech_skills,
-                "tools": sorted(tools),
-                "soft": competency_summary.get("soft_skills", [
-                    "Tư duy logic & Giải quyết vấn đề",
-                    "Làm việc nhóm & Giao tiếp",
-                ]),
+                "tools": [],
+                "soft": competency_summary.get("soft_skills", []),
             },
             "projects": formatted_projects,
             "certifications": [],
-            "languages": [
-                "Tiếng Việt (Tiếng mẹ đẻ)",
-                "Tiếng Anh (Đọc hiểu tài liệu kỹ thuật)",
-            ],
+            "languages": profile.get("languages") or student.get("languages", []),
         }
         return cv_json
 
     # ── LLM API Callers ────────────────────────────────────────
     async def _call_openai_llm(self, prompt: str) -> Optional[str]:
-        """Call OpenAI API. Skips OpenRouter keys (sk-or-*) which are for embedding only."""
-        if not settings.OPENAI_API_KEY or settings.OPENAI_API_KEY.startswith("sk-or-"):
+        """Call OpenAI directly or through OpenRouter when an sk-or key is configured."""
+        if not settings.OPENAI_API_KEY:
             return None
 
-        url = "https://api.openai.com/v1/chat/completions"
+        is_openrouter = settings.OPENAI_API_KEY.startswith("sk-or-")
+        url = "https://openrouter.ai/api/v1/chat/completions" if is_openrouter else "https://api.openai.com/v1/chat/completions"
         headers = {
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": settings.LLM_MODEL if not settings.GEMINI_API_KEY else "gpt-3.5-turbo",
+            "model": f"openai/{settings.LLM_MODEL}" if is_openrouter else settings.LLM_MODEL,
             "messages": [
                 {"role": "system", "content": CV_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
@@ -239,7 +255,7 @@ class CVGeneratorService:
                 cv_json = json.loads(cleaned)
                 if self._validate_cv_schema(cv_json):
                     logger.info("Successfully generated and validated CV JSON via LLM.")
-                    return cv_json
+                    return self._ground_cv_in_profile(cv_json, competency_profile)
                 else:
                     missing = REQUIRED_CV_KEYS - set(cv_json.keys())
                     logger.error(f"LLM response missing required keys: {missing}. Falling back...")

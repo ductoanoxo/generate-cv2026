@@ -14,7 +14,21 @@ class JDParserService:
         if self._converter is None:
             try:
                 from docling.document_converter import DocumentConverter
-                self._converter = DocumentConverter()
+                from docling.datamodel.base_models import InputFormat
+                from docling.datamodel.pipeline_options import AcceleratorDevice, PdfPipelineOptions
+                from docling.document_converter import PdfFormatOption
+
+                # Text extraction does not need OCR/table ML models. Disabling
+                # them avoids downloading large weights and pins PDF work to CPU.
+                pdf_options = PdfPipelineOptions()
+                pdf_options.do_ocr = False
+                pdf_options.do_table_structure = False
+                pdf_options.accelerator_options.device = AcceleratorDevice.CPU
+                self._converter = DocumentConverter(
+                    format_options={
+                        InputFormat.PDF: PdfFormatOption(pipeline_options=pdf_options),
+                    }
+                )
                 logger.info("Docling DocumentConverter initialized successfully.")
             except Exception as e:
                 logger.warning(f"Could not initialize Docling DocumentConverter: {e}. Will fallback to basic parsers.")
