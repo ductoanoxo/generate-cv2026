@@ -1,18 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { defaultCVData, type CVData, type Experience, type Certification } from '../../mock/mockData';
 import { JDInputForm } from '../../components/JDInputForm';
+import { CVPreview } from '../../components/CVPreview';
+import { ATSScoreBadge } from '../../components/ATSScoreBadge';
+import { ValidationReport } from '../../components/ValidationReport';
+import { buildATSReport } from '../../utils/cvValidation';
+import { exportCVPdf, generateCVFullPipeline, parseJobDescription } from '../../services/aiService';
 import { MatchedCoursesTable, type MatchedCourse } from '../../components/MatchedCoursesTable';
 import { ProjectForm, type Project } from '../../components/ProjectForm';
 import { InternshipForm } from '../../components/InternshipForm';
 import { CertForm } from '../../components/CertForm';
 import { SkillRadarChart } from '../../components/SkillRadarChart';
 import { useAuth } from '../../context/AuthContext';
-import { supabase } from '../../utils/supabaseClient';
 import axios from 'axios';
 import { 
   FileText, 
   FloppyDisk, 
-  Printer, 
   Plus, 
   Trash,
   Check,
@@ -25,16 +28,27 @@ import {
   Spinner
 } from '@phosphor-icons/react';
 
+interface SavedCVSummary { id: string; title: string; updatedAt: string; }
+
+// Keep the pipeline useful even when the JD parser returns only plain text.
+// These are explicit technology names, not fabricated student data.
+const extractJDTechnologySkills = (text: string): string[] => {
+  const known = ['Linux', 'Python', 'Docker', 'Kubernetes', 'CI/CD', 'Git', 'GitHub', 'Terraform', 'AWS', 'Azure', 'GCP', 'PostgreSQL', 'JavaScript', 'TypeScript', 'React', 'FastAPI', 'unit testing', 'infrastructure as code'];
+  const lower = text.toLowerCase();
+  return known.filter(skill => lower.includes(skill.toLowerCase()));
+};
 
 export const CVBuilder: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'jd-match' | 'cv-editor'>('jd-match');
-  const [cvData, setCvData] = useState<CVData>(defaultCVData);
+const [cvData, setCvData] = useState<CVData>(defaultCVData);
   const [newSkill, setNewSkill] = useState<string>('');
   const [newLanguage, setNewLanguage] = useState<string>('');
   const [newActivity, setNewActivity] = useState<string>('');
   const [selectedGrades, setSelectedGrades] = useState<string[]>(cvData.grades.map(g => g.subjectName));
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
+  const [savedCVId, setSavedCVId] = useState<string | null>(null);
+  const [savedCVs, setSavedCVs] = useState<SavedCVSummary[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // JD Matching states inside CV Builder
@@ -42,6 +56,9 @@ export const CVBuilder: React.FC = () => {
   const [matchedCourses, setMatchedCourses] = useState<MatchedCourse[]>([]);
   const [isMatchingLoading, setIsMatchingLoading] = useState<boolean>(false);
   const [rawDbSubjects, setRawDbSubjects] = useState<any[]>([]);
+  const [apiMessage, setApiMessage] = useState<string>('');
+  const [shouldRegenerateAfterProject, setShouldRegenerateAfterProject] = useState(false);
+  const atsReport = useMemo(() => buildATSReport(cvData, jdText), [cvData, jdText]);
 
 
   // Fetch real student scores from .NET API or Supabase DB
@@ -86,35 +103,17 @@ export const CVBuilder: React.FC = () => {
         console.warn('API score query failed, loading from Supabase...', err);
       }
 
-      // Supabase fallback
-      try {
-        const { data: dbSubjects } = await supabase.from('Subjects').select('*');
-        if (dbSubjects && dbSubjects.length > 0) {
-          const uniqueMap = new Map<string, any>();
-          dbSubjects.forEach(s => {
-            const code = s.SubjectCode || `IT${s.Id?.slice(0, 3)}`;
-            const name = s.Name;
-            const key = (code || name || '').trim().toLowerCase();
-            if (!key) return;
-            if (!uniqueMap.has(key)) {
-              uniqueMap.set(key, {
-                subjectCode: code,
-                subjectName: name,
-                creditPoint: s.CreditPoint || 3,
-                combinedResult: 8.5,
-                gradeC: 'A',
-                grade4: 4
-              });
-            }
-          });
-          setRawDbSubjects(Array.from(uniqueMap.values()));
-        }
-      } catch (sErr) {
-        console.error(sErr);
-      }
+      setApiMessage('Không tải được điểm thật từ hệ thống. Vui lòng thử lại sau.');
     };
 
     fetchScores();
+  }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    axios.get<SavedCVSummary[]>('http://localhost:5000/api/saved-cvs')
+      .then(response => setSavedCVs(response.data))
+      .catch(() => setApiMessage('Không tải được danh sách CV đã lưu.'));
   }, [user]);
 
   // Update profile from logged in user if available
@@ -132,112 +131,114 @@ export const CVBuilder: React.FC = () => {
   }, [user]);
 
   // Handle Analyzing JD & Matching Courses
-  const handleAnalyzeJD = (inputJdText: string) => {
+  const handleAnalyzeJD = async (inputJdText: string, _fileName?: string, file?: File) => {
     setJdText(inputJdText);
     setIsMatchingLoading(true);
+    setApiMessage('');
+    let normalizedJd = inputJdText;
+    try {
+      const parsed = await parseJobDescription(inputJdText, file);
+      if (parsed.markdown.trim()) normalizedJd = parsed.markdown;
+      setJdText(normalizedJd);
+      const selectedCourses = rawDbSubjects
+        .filter(subject => Number.isFinite(subject.combinedResult ?? subject.result))
+        .map(subject => ({
+          course_id: subject.subjectCode,
+          course_name: subject.subjectName,
+          grade: subject.combinedResult ?? subject.result,
+          credit_point: subject.creditPoint || 3,
+        }));
 
-    setTimeout(() => {
-      const jdLower = inputJdText.toLowerCase();
-      const sources = rawDbSubjects.length > 0 ? rawDbSubjects : cvData.grades.map(g => ({
-        subjectCode: 'IT101',
-        subjectName: g.subjectName,
-        creditPoint: g.credits,
-        combinedResult: g.score,
-        gradeC: g.score >= 8.5 ? 'A' : (g.score >= 7.0 ? 'B' : 'C')
+      if (!selectedCourses.length) {
+        throw new Error('Chưa có điểm học phần thực tế để tạo CV.');
+      }
+
+      const projects = cvData.projects.map(project => ({
+        project_name: project.name,
+        role: project.role,
+        description: project.description,
+        technologies: project.technologies,
       }));
+      const jdLower = normalizedJd.toLowerCase();
+      const requiredSkills = [...new Set([
+        ...cvData.skills,
+        ...extractJDTechnologySkills(normalizedJd),
+        ...projects.flatMap(project => project.technologies as string[]),
+      ].filter(skill => jdLower.includes(skill.toLowerCase())))];
 
-      const matched: MatchedCourse[] = sources.map(sub => {
-        const nameLower = sub.subjectName.toLowerCase();
-        let hits: string[] = [];
-        let scoreBonus = 0;
-
-        if ((jdLower.includes('react') || jdLower.includes('web') || jdLower.includes('frontend') || jdLower.includes('css') || jdLower.includes('html')) &&
-            (nameLower.includes('web') || nameLower.includes('giao diện'))) {
-          hits.push('Lập trình Web', 'Frontend UI', 'React.js');
-          scoreBonus += 35;
-        }
-
-        if ((jdLower.includes('c#') || jdLower.includes('.net') || jdLower.includes('lập trình c') || jdLower.includes('backend')) &&
-            (nameLower.includes('lập trình c') || nameLower.includes('c#') || nameLower.includes('.net'))) {
-          hits.push('C# / .NET Core', 'Kỹ thuật Lập trình C');
-          scoreBonus += 30;
-        }
-
-        if ((jdLower.includes('sql') || jdLower.includes('database') || jdLower.includes('cơ sở dữ liệu')) &&
-            (nameLower.includes('cơ sở dữ liệu') || nameLower.includes('sql'))) {
-          hits.push('Cơ sở dữ liệu SQL', 'Thiết kế Database');
-          scoreBonus += 30;
-        }
-
-        if ((jdLower.includes('phân tích') || jdLower.includes('thiết kế hệ thống') || jdLower.includes('phần mềm')) &&
-            (nameLower.includes('phân tích') || nameLower.includes('kỹ thuật phần mềm'))) {
-          hits.push('Phân tích & Thiết kế hệ thống', 'Kỹ thuật phần mềm');
-          scoreBonus += 28;
-        }
-
-        const jdWords = jdLower.split(/[\s,.\-\/\(\)]+/).filter((w: string) => w.length > 2);
-        const nameWords = nameLower.split(/[\s,.\-\/\(\)]+/).filter((w: string) => w.length > 2);
-        nameWords.forEach((nw: string) => {
-          if (jdWords.includes(nw)) {
-            scoreBonus += 10;
-            if (!hits.includes(nw)) hits.push(nw);
-          }
-        });
-
-        if (hits.length === 0) {
-          hits = ['Nền tảng CNTT core'];
-        }
-
-        const calcMatch = Math.min(98, Math.max(50, 55 + scoreBonus));
-
-        return {
-          subjectCode: sub.subjectCode || 'IT100',
-          subjectName: sub.subjectName,
-          creditPoint: sub.creditPoint || 3,
-          combinedResult: sub.combinedResult ?? sub.score ?? 8.0,
-          gradeC: sub.gradeC || 'B',
-          grade4: sub.grade4 || 3,
-          matchPercentage: calcMatch,
-          matchedKeywords: Array.from(new Set(hits)),
-          relevanceReason: `Đáp ứng tốt ${hits.length} từ khóa tiêu chí của nhà tuyển dụng.`
-        };
+      const result = await generateCVFullPipeline({
+        student: {
+          student_id: user?.username,
+          full_name: cvData.profile.fullName,
+          email: cvData.profile.email,
+          phone: cvData.profile.phoneNumber,
+          overall_percentage: cvData.profile.gpa,
+          languages: cvData.languages,
+        },
+        target_job: {
+          job_title: normalizedJd.split(/\n|[.!?]/).find(line => line.trim())?.trim().slice(0, 80) || 'Ứng viên CNTT',
+          required_skills: requiredSkills,
+        },
+        jd_raw_text: normalizedJd,
+        selected_courses: selectedCourses,
+        projects,
       });
 
-      // Deduplicate matched array by subjectCode/subjectName
-      const uniqueMatchedMap = new Map<string, MatchedCourse>();
-      matched.forEach(m => {
-        const key = (m.subjectCode || m.subjectName || '').trim().toLowerCase();
-        if (!key) return;
-        if (!uniqueMatchedMap.has(key)) {
-          uniqueMatchedMap.set(key, m);
-        } else {
-          const existing = uniqueMatchedMap.get(key)!;
-          if (m.matchPercentage > existing.matchPercentage) {
-            uniqueMatchedMap.set(key, m);
-          }
-        }
-      });
-
-      const uniqueMatched = Array.from(uniqueMatchedMap.values());
-      uniqueMatched.sort((a, b) => b.matchPercentage - a.matchPercentage);
-      setMatchedCourses(uniqueMatched);
-
-      // Auto update CV Grades state with matched courses from DB
-      const updatedCvGrades = uniqueMatched.map(m => ({
-        subjectName: m.subjectName,
-        score: m.combinedResult ?? 8.0,
-        credits: m.creditPoint
+      const pipelineCourses = result.competency_profile.selected_courses || [];
+      const matched = pipelineCourses.map(course => ({
+        subjectCode: course.course_id,
+        subjectName: course.course_name,
+        creditPoint: course.credit_point || 3,
+        combinedResult: course.grade,
+        gradeC: course.grade >= 8.5 ? 'A' : course.grade >= 7 ? 'B' : course.grade >= 5.5 ? 'C' : 'D',
+        grade4: course.grade >= 8.5 ? 4 : course.grade >= 7 ? 3 : course.grade >= 5.5 ? 2 : 1,
+        matchPercentage: Math.round((course.similarity_score || 0) * 100),
+        matchedKeywords: course.matched_skills || course.clos || [],
+        relevanceReason: 'Được AI đối chiếu với JD, CLO và điểm học phần thực tế.',
       }));
+      const generated = result.cv;
+      const profileSkills = (result.competency_profile.competency_summary?.technical_skills || [])
+        .filter(skill => (skill.confidence ?? 0) >= 0.5)
+        .map(skill => skill.skill);
+      const generatedLanguages = generated.languages?.length
+        ? generated.languages
+        : (result.competency_profile.languages || cvData.languages);
+      const updatedCvGrades = matched.map(course => ({ subjectName: course.subjectName, score: course.combinedResult, credits: course.creditPoint }));
 
-      setCvData(prev => ({
-        ...prev,
-        grades: updatedCvGrades
+      setMatchedCourses(matched);
+      setCvData(previous => ({
+        ...previous,
+        profile: {
+          ...previous.profile,
+          fullName: generated.personal_info.full_name || previous.profile.fullName,
+          email: generated.personal_info.email || previous.profile.email,
+          phoneNumber: generated.personal_info.phone || previous.profile.phoneNumber,
+        },
+        summary: generated.personal_info.summary || previous.summary,
+        skills: [...new Set([...generated.skills.technical, ...generated.skills.tools, ...profileSkills])],
+        languages: generatedLanguages,
+        projects: generated.projects.map(project => ({
+          name: project.name,
+          role: project.role,
+          description: project.description,
+          technologies: project.technologies,
+        })),
+        grades: updatedCvGrades,
       }));
-
-      setSelectedGrades(updatedCvGrades.map(g => g.subjectName));
+      setSelectedGrades(updatedCvGrades.map(grade => grade.subjectName));
+      setApiMessage(`Đã hoàn tất full pipeline — ATS: ${String(result.ats_report.ats_score ?? result.ats_report.score ?? 'đang đánh giá')}; kiểm chứng evidence: ${String(result.validation_report.evidence_score ?? 'đã chạy')}.`);
+    } catch (error) {
+      setApiMessage(error instanceof Error ? error.message : 'Không thể chạy full pipeline. Vui lòng thử lại.');
+    } finally {
       setIsMatchingLoading(false);
-    }, 600);
+    }
   };
+
+  useEffect(() => {
+    if (!shouldRegenerateAfterProject || !jdText.trim()) return;
+    setShouldRegenerateAfterProject(false);
+    void handleAnalyzeJD(jdText);
+  }, [shouldRegenerateAfterProject]);
 
 
   const handleProfileFieldChange = (field: string, value: any) => {
@@ -314,6 +315,10 @@ export const CVBuilder: React.FC = () => {
       ...prev,
       projects: [...prev.projects, project]
     }));
+    if (jdText.trim()) {
+      setApiMessage('Đã thêm project. Đang cập nhật lại summary và CV theo dữ liệu mới...');
+      setShouldRegenerateAfterProject(true);
+    }
   };
 
   const handleRemoveProject = (index: number) => {
@@ -361,13 +366,39 @@ export const CVBuilder: React.FC = () => {
     );
   };
 
-  const handleSave = () => {
-    setSaveSuccess(true);
-    setTimeout(() => setSaveSuccess(false), 3000);
+  const handleSave = async () => {
+    try {
+      const response = await axios.post<{ id: string; title: string; updatedAt: string }>('http://localhost:5000/api/saved-cvs', {
+        id: savedCVId,
+        title: cvData.profile.fullName ? `CV ${cvData.profile.fullName}` : 'CV chưa đặt tên',
+        contentJson: JSON.stringify({ cvData, jdText, selectedGrades }),
+      });
+      setSavedCVId(response.data.id);
+      setSavedCVs(previous => [
+        { id: response.data.id, title: response.data.title, updatedAt: response.data.updatedAt },
+        ...previous.filter(cv => cv.id !== response.data.id),
+      ]);
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    } catch {
+      setApiMessage('Không thể lưu CV. Vui lòng thử lại.');
+    }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleLoadSavedCV = async (id: string) => {
+    if (!id) return;
+    try {
+      const response = await axios.get<{ id: string; content: string }>(`http://localhost:5000/api/saved-cvs/${id}`);
+      const saved = JSON.parse(response.data.content) as { cvData: CVData; jdText?: string; selectedGrades?: string[] };
+      setCvData(saved.cvData);
+      setJdText(saved.jdText || '');
+      setSelectedGrades(saved.selectedGrades || saved.cvData.grades.map(grade => grade.subjectName));
+      setSavedCVId(response.data.id);
+      setActiveTab('cv-editor');
+      setApiMessage('Đã mở CV đã lưu để tiếp tục chỉnh sửa.');
+    } catch {
+      setApiMessage('Không thể mở CV đã lưu.');
+    }
   };
 
   const handleExportPDF = async () => {
@@ -375,6 +406,20 @@ export const CVBuilder: React.FC = () => {
     if (!element) return;
 
     setIsExportingPdf(true);
+
+    try {
+      const blob = await exportCVPdf(cvData);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `CV_${(cvData.profile.fullName || 'Student').replace(/\s+/g, '_')}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
+      setIsExportingPdf(false);
+      return;
+    } catch {
+      // Local html2pdf fallback keeps the demo usable without AI service.
+    }
 
     const getHtml2Pdf = async (): Promise<any> => {
       if ((window as any).html2pdf) {
@@ -422,7 +467,14 @@ export const CVBuilder: React.FC = () => {
             Gom thông tin cá nhân, phân tích JD để tự động chọn các môn học có kết quả tốt nhất từ CSDL đưa vào CV.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select aria-label="Chọn CV đã lưu" className="input-field" value={savedCVId || ''} onChange={(event) => handleLoadSavedCV(event.target.value)} style={{ minWidth: '180px', padding: '8px 10px' }}>
+            <option value="">CV mới</option>
+            {savedCVs.map(cv => <option key={cv.id} value={cv.id}>{cv.title}</option>)}
+          </select>
+          <button className="btn-icon-text" onClick={() => { setSavedCVId(null); setCvData(defaultCVData); setJdText(''); setSelectedGrades([]); }} style={{ background: 'rgba(30, 41, 59, 0.8)', border: '1px solid var(--color-border)' }}>
+            <Plus size={18} /><span>CV mới</span>
+          </button>
           <button 
             className="btn-icon-text primary" 
             onClick={handleExportPDF} 
@@ -503,6 +555,7 @@ export const CVBuilder: React.FC = () => {
             isLoading={isMatchingLoading}
             initialText={jdText}
           />
+          {apiMessage && <div role="status" style={{ color: apiMessage.startsWith('JD đã') ? '#22C55E' : '#EAB308', fontSize: '0.82rem' }}>{apiMessage}</div>}
 
           {matchedCourses.length > 0 && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -534,6 +587,10 @@ export const CVBuilder: React.FC = () => {
         <div className="cv-builder-container">
           {/* CV Editor Column */}
           <div className="cv-editor">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div><h3 style={{ margin: 0, color: '#F8FAFC' }}>Biên tập CV</h3><p style={{ margin: '4px 0 0', color: '#94A3B8', fontSize: '0.8rem' }}>Thay đổi sẽ cập nhật ngay sang bản xem trước.</p></div>
+              <ATSScoreBadge score={atsReport.score} compact />
+            </div>
             {/* Section 1: Personal Info */}
             <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -756,12 +813,13 @@ export const CVBuilder: React.FC = () => {
                 ))}
               </div>
             </div>
+            <ValidationReport report={atsReport} />
           </div>
 
           {/* CV Live Preview Column */}
-          <div className="cv-preview">
+          <CVPreview cvData={cvData} selectedGrades={selectedGrades}>
             {/* Printable Container A4 */}
-            <div id="printable-cv" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
+            <div id="printable-cv" className="cv-a4-sheet" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
               {/* CV Header */}
               <div className="cv-pdf-header">
                 <div>
@@ -888,7 +946,7 @@ export const CVBuilder: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </CVPreview>
         </div>
       )}
     </div>

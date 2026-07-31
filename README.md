@@ -93,8 +93,19 @@ Hệ thống phân quyền dựa trên trường dữ liệu `Role` (số nguyê
 Nằm tại tuyến đường `/student/cv` dành riêng cho sinh viên:
 - **Tự động điền (Autofill)**: Thông tin cá nhân (MSSV, ngành, khoa) và kết quả thi được lấy trực tiếp từ cơ sở dữ liệu, đảm bảo tính chính xác và được hệ thống xác thực.
 - **Live Preview**: Xem trước CV theo định dạng A4 chuẩn thời gian thực song song với khung soạn thảo.
+- **ATS & Validation**: Chấm điểm theo từ khóa JD và kiểm tra độ đầy đủ CV theo thời gian thực bằng `ATSScoreBadge.tsx` và `ValidationReport.tsx`.
 - **Tùy chỉnh linh hoạt**: Sinh viên tự nhập thêm giới thiệu bản thân, kỹ năng, dự án thực tế và các hoạt động ngoại khóa.
-- **Xuất bản**: Hỗ trợ in trực tiếp hoặc lưu file PDF thông qua phím tắt tích hợp `window.print()`.
+- **JD Pipeline**: Upload PDF/DOCX/TXT được gửi tới AI service `/api/parse-jd`; frontend có fallback local khi AI service chưa chạy.
+- **Xuất bản**: Ưu tiên AI service `/api/export/pdf`, sau đó fallback sang `html2pdf.js` và `window.print()`.
+
+### ✅ Kiểm thử nhanh Ngày 10
+
+```bash
+cd frontend && npm run build
+dotnet test backend.Tests/backend.Tests.csproj
+cd ai-service && pip install -r requirements.txt && pytest -q
+docker compose config --quiet
+```
 
 ---
 

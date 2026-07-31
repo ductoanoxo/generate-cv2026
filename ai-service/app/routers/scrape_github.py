@@ -16,6 +16,7 @@ class ScrapeGithubResponse(BaseModel):
     status: str
     repo: dict
     readme: dict
+    project_summary: str = ""
     tech_stack: dict
     file_tree: list
 
@@ -34,6 +35,7 @@ async def scrape_github_project(payload: ScrapeGithubRequest):
             status=result["status"],
             repo=result["repo"],
             readme=result["readme"],
+            project_summary=result.get("project_summary", ""),
             tech_stack=result["tech_stack"],
             file_tree=result["file_tree"]
         )

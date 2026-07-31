@@ -426,45 +426,17 @@ export interface CVData {
 }
 
 export const defaultCVData: CVData = {
-  profile: mockStudents[0], // Đặng Đức Toàn
-  summary: 'Sinh viên chuyên ngành Kỹ thuật Phần mềm tại Trường Cao Đẳng Tây Đô, có nền tảng vững chắc về phát triển Web, cơ sở dữ liệu và tư duy thuật toán. Có khả năng tự học tốt, nhiệt tình và thích làm việc nhóm để giải quyết các vấn đề kỹ thuật.',
-  skills: ['React.js', 'Node.js', 'SQL / PostgreSQL', 'Git', 'C# / .NET Core', 'HTML5 & CSS3'],
-  languages: ['Tiếng Việt (Bản xứ)', 'Tiếng Anh (Giao tiếp khá - TOEIC 650)'],
-  projects: [
-    {
-      name: 'Hệ thống Quản lý Thư viện',
-      role: 'Full-stack Developer',
-      description: 'Dự án học phần xây dựng ứng dụng web quản lý sách, mượn trả và quản lý thẻ thư viện cho trường học.',
-      technologies: ['React', 'Node.js', 'PostgreSQL']
-    },
-    {
-      name: 'Website Giới thiệu sản phẩm nông nghiệp',
-      role: 'Frontend Developer',
-      description: 'Thiết kế giao diện và tích hợp API cho website giới thiệu và mua bán các mặt hàng nông sản sạch.',
-      technologies: ['HTML', 'CSS', 'JavaScript']
-    }
-  ],
-  certifications: [
-    { certificationName: 'Chứng chỉ Lập trình Web Full-stack (F8)', date: '2025' },
-    { certificationName: 'Toeic 650', date: '2025' }
-  ],
-  experience: [
-    {
-      company: 'Công ty TNHH Phần mềm XYZ',
-      role: 'Intern Frontend Developer',
-      period: '06/2025 - 08/2025',
-      description: 'Tham gia phát triển giao diện web bằng React.js, fix bug và hỗ trợ đội frontend.'
-    }
-  ],
-  activities: [
-    'Thành viên câu lạc bộ Tin học Trường Cao đẳng Tây Đô.',
-    'Tình nguyện viên chiến dịch Mùa hè xanh năm 2025.'
-  ],
-  grades: [
-    { subjectName: 'Kỹ thuật lập trình C', score: 8.5, credits: 3 },
-    { subjectName: 'Lập trình Web nâng cao', score: 9.0, credits: 4 },
-    { subjectName: 'Cơ sở dữ liệu', score: 7.8, credits: 3 },
-    { subjectName: 'Phân tích và thiết kế hệ thống', score: 8.2, credits: 3 }
-  ]
+  profile: {
+    id: '', userId: '', studentCode: '', fullName: '', email: '', phoneNumber: '',
+    gender: '', birthDate: '', cccd: '', hometown: '', fatherName: '', motherName: '',
+    faculty: '', major: '', academicYear: '', gpa: 0
+  },
+  summary: '',
+  skills: [],
+  languages: [],
+  projects: [],
+  certifications: [],
+  experience: [],
+  activities: [],
+  grades: []
 };
-

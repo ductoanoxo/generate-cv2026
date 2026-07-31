@@ -27,6 +27,7 @@ class StudentInfoInput(BaseModel):
     graduation_year: Optional[str] = Field("2026", description="Năm tốt nghiệp")
     overall_gpa: Optional[float] = Field(3.2, description="Điểm GPA hệ 4")
     overall_percentage: Optional[float] = Field(8.0, description="Điểm GPA hệ 10")
+    languages: List[str] = Field(default_factory=list, description="Ngoại ngữ do sinh viên cung cấp")
 
 
 class TargetJobInput(BaseModel):
@@ -203,6 +204,5 @@ async def generate_cv_full_pipeline(payload: FullPipelineRequest):
     except Exception as e:
         logger.error(f"Error running full CV pipeline: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Full pipeline failed: {str(e)}")
-
 
 

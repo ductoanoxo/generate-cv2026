@@ -616,6 +616,29 @@ button, input, select, textarea {
   color: #475569;
 }
 
+.cv-a4-sheet {
+  width: 210mm;
+  min-height: 297mm;
+  box-sizing: border-box;
+  padding: 16mm;
+  background: #ffffff;
+  color: #0F172A;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
+}
+
+.cv-tag-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.cv-preview-item { padding: 6px 10px; background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 4px; }
+.cv-preview-item > div { font-size: 0.75rem; color: #22C55E; font-weight: 600; }
+.cv-preview-item p { margin: 2px 0 0; font-size: 0.75rem; }
+.cv-preview-note { font-size: 0.75rem; color: #64748B !important; font-style: italic; margin: 0; }
+.cv-grade-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.cv-grade-item { display: flex; justify-content: space-between; padding: 6px 12px; border: 1px solid #E2E8F0; border-radius: 4px; background: #F8FAFC; font-size: 0.8rem; }
+.cv-grade-item strong { color: #22C55E; }
+
+@media (max-width: 900px) {
+  .cv-a4-sheet { width: 100%; min-height: auto; padding: 8mm; }
+}
+
 /* CV PDF Styles (Standard A4 representation) */
 .cv-pdf-header {
   border-bottom: 2px solid #22C55E;
@@ -814,4 +837,3 @@ button, input, select, textarea {
     -webkit-print-color-adjust: exact;
   }
 }
-

@@ -11,7 +11,7 @@ import {
 } from '@phosphor-icons/react';
 
 interface JDInputFormProps {
-  onAnalyze: (jdText: string, fileName?: string) => void;
+  onAnalyze: (jdText: string, fileName?: string, file?: File) => void;
   isLoading?: boolean;
   initialText?: string;
 }
@@ -150,7 +150,7 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!jdText.trim()) return;
-    onAnalyze(jdText, uploadedFile?.name);
+    onAnalyze(jdText, uploadedFile?.name, fileInputRef.current?.files?.[0]);
   };
 
   const getFileIcon = (fileName: string) => {

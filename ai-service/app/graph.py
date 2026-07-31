@@ -63,20 +63,45 @@ def node_search_courses(state: CVPipelineState) -> CVPipelineState:
     try:
         search_res = vector_search_service.search(query=jd_text, limit=5)
         
-        # Format search results to course objects
-        formatted_courses = []
+        user_courses = state.get("selected_courses") or []
+        if not user_courses:
+            return {"matched_courses": []}
+
+        def course_keys(course: Dict[str, Any]) -> set[str]:
+            return {
+                str(value).strip().lower()
+                for value in (
+                    course.get("course_id"),
+                    course.get("subjectCode"),
+                    course.get("course_name"),
+                    course.get("subjectName"),
+                )
+                if value
+            }
+
+        matched_courses = []
         for item in search_res:
             payload = item.get("payload", {})
-            formatted_courses.append({
-                "course_name": payload.get("subject_name") or payload.get("name", "Học phần"),
-                "clos": [payload.get("content", "")] if payload.get("content") else [],
-                "grade": 8.5
-            })
+            result_keys = {
+                str(value).strip().lower()
+                for value in (payload.get("subject_code"), payload.get("subject_name"), payload.get("name"))
+                if value
+            }
+            selected_course = next((course for course in user_courses if course_keys(course) & result_keys), None)
+            if not selected_course:
+                continue
 
-        # Merge with user selected courses if provided
-        user_courses = state.get("selected_courses") or []
-        combined_courses = user_courses + formatted_courses
-        return {"matched_courses": combined_courses}
+            enriched_course = dict(selected_course)
+            enriched_course["course_id"] = enriched_course.get("course_id") or payload.get("subject_code")
+            enriched_course["course_name"] = enriched_course.get("course_name") or payload.get("subject_name")
+            enriched_course["similarity_score"] = item.get("score", 0)
+            clos = list(enriched_course.get("clos") or [])
+            if payload.get("content") and payload["content"] not in clos:
+                clos.append(payload["content"])
+            enriched_course["clos"] = clos
+            matched_courses.append(enriched_course)
+
+        return {"matched_courses": matched_courses or user_courses}
     except Exception as e:
         logger.warning(f"Vector search failed in pipeline: {e}. Using selected courses.")
         return {"matched_courses": state.get("selected_courses") or []}
@@ -215,4 +240,3 @@ try:
 except ImportError:
     logger.warning("langgraph package not found in current environment. Using FallbackCVPipelineGraph.")
     cv_pipeline_graph = FallbackCVPipelineGraph()
-
