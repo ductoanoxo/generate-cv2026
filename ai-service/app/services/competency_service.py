@@ -51,9 +51,11 @@ SKILL_SYNONYMS: Dict[str, List[str]] = {
 # ────────────────────────────────────────────────────────────────
 CATEGORY_MAP: Dict[str, List[str]] = {
     "web_frontend": ["react", "vue", "angular", "svelte", "nextjs", "html", "css", "tailwind", "bootstrap", "frontend", "giao diện web"],
-    "web_backend": ["asp.net", "asp.net core", ".net", "c#", "fastapi", "django", "flask", "express", "nestjs", "spring", "spring boot", "node.js", "backend", "rest api", "graphql"],
-    "database": ["postgresql", "mysql", "mongodb", "redis", "sql", "sqlite", "cơ sở dữ liệu", "database", "supabase", "orm"],
-    "devops_cloud": ["docker", "kubernetes", "aws", "azure", "ci/cd", "nginx", "git", "github"],
+    "web_backend": ["java", "spring", "spring boot", "jmix", "vaadin", "c++", "c#", "asp.net", "asp.net core", ".net", "fastapi", "django", "flask", "express", "nestjs", "node.js", "backend", "rest api", "graphql"],
+    "database": ["postgresql", "oracle", "mysql", "mongodb", "redis", "sql", "sqlite", "cơ sở dữ liệu", "database", "supabase", "orm", "db2"],
+    "domain_knowledge": ["core banking", "banking", "thought machine", "symbols", "foreign exchange", "fx platform", "financial accounting", "custody banking", "anti-money laundering", "aml", "compliance", "tài chính", "ngân hàng"],
+    "devops_cloud": ["docker", "kubernetes", "aws", "azure", "ci/cd", "nginx", "git", "github", "prometheus", "grafana", "draw.io", "figma", "monitoring", "telemetry", "alerting"],
+    "business_skills": ["crm", "lark", "erp", "odoo", "customer relationship management", "enterprise resource planning", "quản trị doanh nghiệp"],
     "ai_data": ["python", "machine learning", "deep learning", "nlp", "pandas", "numpy", "pytorch", "tensorflow", "openai", "llm", "trí tuệ nhân tạo"],
 }
 
@@ -67,6 +69,25 @@ DEFAULT_SOFT_SKILLS = [
     "Tự học & Nghiên cứu công nghệ mới",
     "Quản lý thời gian & Tiến độ dự án",
 ]
+
+# ────────────────────────────────────────────────────────────────
+# Display names for skill categories on the CV
+# Maps internal CATEGORY_MAP keys → professional display labels
+# ────────────────────────────────────────────────────────────────
+SKILL_DISPLAY_CATEGORIES: Dict[str, str] = {
+    "web_backend": "Backend & Programming Skills",
+    "database": "Databases & Data Management",
+    "domain_knowledge": "Domain Knowledge",
+    "devops_cloud": "DevOps, Tools & Monitoring",
+    "business_skills": "Business Skills",
+    "web_frontend": "Frontend & UI Development",
+    "ai_data": "AI, Data Science & Machine Learning",
+}
+
+SOFT_SKILLS_CATEGORY = "Soft Skills & Methodologies"
+GENERAL_SKILLS_CATEGORY = "General Technical Skills"
+
+
 
 
 class CompetencyService:
@@ -199,6 +220,54 @@ class CompetencyService:
                     found.add(label)
         return list(found)
 
+    # ── Smart Skill Categorization ──────────────────────────────
+    def _categorize_skills(
+        self,
+        technical_summary: List[Dict[str, Any]],
+        soft_skills: List[str],
+    ) -> List[Dict[str, Any]]:
+        """
+        Group technical + soft skills into display categories
+        using CATEGORY_MAP + SKILL_DISPLAY_CATEGORIES.
+        Returns ordered list of {category, items} dicts.
+        """
+        grouped: Dict[str, List[str]] = {}
+
+        for entry in technical_summary:
+            skill = entry["skill"]
+            cat_key = self._get_skill_category(skill)
+            display_name = (
+                SKILL_DISPLAY_CATEGORIES.get(cat_key, GENERAL_SKILLS_CATEGORY)
+                if cat_key else GENERAL_SKILLS_CATEGORY
+            )
+            grouped.setdefault(display_name, [])
+            if skill not in grouped[display_name]:
+                grouped[display_name].append(skill)
+
+        # Soft skills as last group
+        if soft_skills:
+            grouped.setdefault(SOFT_SKILLS_CATEGORY, [])
+            for ss in soft_skills:
+                if ss not in grouped[SOFT_SKILLS_CATEGORY]:
+                    grouped[SOFT_SKILLS_CATEGORY].append(ss)
+
+        # Build ordered list — defined categories first, then general, then soft
+        ordered = []
+        seen = set()
+        for _cat_key, display_name in SKILL_DISPLAY_CATEGORIES.items():
+            if display_name in grouped and display_name not in seen:
+                ordered.append({"category": display_name, "items": grouped[display_name]})
+                seen.add(display_name)
+
+        if GENERAL_SKILLS_CATEGORY in grouped and GENERAL_SKILLS_CATEGORY not in seen:
+            ordered.append({"category": GENERAL_SKILLS_CATEGORY, "items": grouped[GENERAL_SKILLS_CATEGORY]})
+            seen.add(GENERAL_SKILLS_CATEGORY)
+
+        if SOFT_SKILLS_CATEGORY in grouped and SOFT_SKILLS_CATEGORY not in seen:
+            ordered.append({"category": SOFT_SKILLS_CATEGORY, "items": grouped[SOFT_SKILLS_CATEGORY]})
+
+        return ordered
+
     # ── Main Entry Point ───────────────────────────────────────
     def build_profile(
         self,
@@ -224,8 +293,6 @@ class CompetencyService:
                 f"{' '.join(course.get('clos', []))}"
             )
             grade = float(course.get("grade") or course.get("combinedResult") or 0)
-            # A course is evidence of a skill only when the student passed it
-            # with a good result and the CLO/description mentions that skill.
             matched_skills = (
                 self._match_skills_for_item(required_skills, course_text)
                 if grade >= GOOD_GRADE_THRESHOLD else []
@@ -280,8 +347,6 @@ class CompetencyService:
 
             conf_score, evidences = self._calculate_confidence(skill, matching_courses, matching_projects)
 
-            # Do not expose a JD keyword as a student skill without course CLO
-            # evidence or a real project proving it.
             if matching_courses or matching_projects:
                 technical_summary.append({
                     "skill": skill,
@@ -293,7 +358,17 @@ class CompetencyService:
         soft_skills = self._extract_soft_skills([
             c for c in processed_courses if c.get("grade", 0) >= GOOD_GRADE_THRESHOLD
         ])
+        categorized_skills = self._categorize_skills(technical_summary, soft_skills)
+
         languages = [str(language).strip() for language in student_info.get("languages", []) if str(language).strip()]
+
+        import datetime
+        current_year = datetime.datetime.now().year
+        academic_year_val = str(student_info.get("academic_year") or "2022-2026")
+        start_year_match = re.search(r'\b(20\d{2})\b', academic_year_val)
+        start_year = int(start_year_match.group(1)) if start_year_match else 2022
+        year_level = max(1, current_year - start_year)
+        student_year_label = f"Năm thứ {year_level}"
 
         # Final Competency Profile Structure
         profile = {
@@ -304,7 +379,8 @@ class CompetencyService:
                 "phone": student_info.get("phone") or student_info.get("phoneNumber"),
                 "major": student_info.get("major") or "Công nghệ thông tin",
                 "specialization": student_info.get("specialization") or "Kỹ thuật phần mềm",
-                "academic_year": student_info.get("academic_year") or "2022-2026",
+                "academic_year": academic_year_val,
+                "student_year": student_year_label,
                 "overall_gpa": float(student_info.get("overall_gpa") or student_info.get("gpa") or 3.2),
                 "overall_percentage": float(student_info.get("overall_percentage") or 8.0),
             },
@@ -318,6 +394,7 @@ class CompetencyService:
             "competency_summary": {
                 "technical_skills": technical_summary,
                 "soft_skills": soft_skills,
+                "categorized_skills": categorized_skills,
             },
         }
 
@@ -325,3 +402,5 @@ class CompetencyService:
 
 
 competency_service = CompetencyService()
+
+

@@ -48,9 +48,9 @@ class CVGeneratorService:
         profile guarantees that only user/evidence-backed values reach the UI.
         """
         grounded = self.generate_fallback_cv(profile)
-        # Keep only presentation text from the model when it is safe to do so.
-        # The fallback summary is deliberately used because it is count- and
-        # contact-grounded and cannot claim unsupported experience.
+        if isinstance(llm_cv, dict) and llm_cv.get("personal_info", {}).get("summary"):
+            grounded["personal_info"]["summary"] = llm_cv["personal_info"]["summary"]
+
         if isinstance(llm_cv.get("projects"), list):
             source_projects = profile.get("projects", [])
             for index, project in enumerate(grounded.get("projects", [])):
@@ -77,10 +77,9 @@ class CVGeneratorService:
         job_title = target_job.get("job_title", "Software Engineer")
         student_name = student.get("full_name", "Sinh viên Tây Đô")
 
-        # Build relevant courses (top 4 by grade)
-        sorted_courses = sorted(selected_courses, key=lambda c: c.get("grade", 0), reverse=True)
+        # Build relevant courses strictly from matched selected_courses
         relevant_courses = []
-        for c in sorted_courses[:4]:
+        for c in selected_courses:
             grade_val = c.get("grade", 8.0)
             clos = c.get("clos", [])
             relevant_courses.append({
@@ -122,20 +121,25 @@ class CVGeneratorService:
                 "highlights": highlights,
             })
 
+        # Build categorized skills from competency profile (smart categorization)
+        profile_categorized = competency_summary.get("categorized_skills", [])
+        if not profile_categorized:
+            profile_categorized = [
+                {"category": "Technical Skills", "items": tech_skills},
+            ]
+            if competency_summary.get("soft_skills"):
+                profile_categorized.append({
+                    "category": "Soft Skills & Methodologies",
+                    "items": competency_summary["soft_skills"],
+                })
+
         cv_json = {
             "personal_info": {
                 "full_name": student_name,
                 "title": job_title,
                 "email": student.get("email") or "",
                 "phone": student.get("phone") or student.get("phoneNumber") or "",
-                "summary": (
-                    f"Sinh viên ngành {student.get('major', 'Công nghệ thông tin')} "
-                    f"chuyên ngành {student.get('specialization', 'Kỹ thuật phần mềm')}, "
-                    f"định hướng phát triển trở thành {job_title} chuyên nghiệp. "
-                    f"Nền tảng kiến thức vững chắc với GPA {student.get('overall_gpa', 3.2):.2f}/4.0, "
-                    f"có kinh nghiệm thực tế qua {len(projects)} dự án cá nhân "
-                    f"và {len(selected_courses)} học phần chuyên ngành liên quan."
-                ),
+                "summary": f"Sinh viên ngành {student.get('major', 'CNTT')} - {student.get('specialization', 'Kỹ thuật phần mềm')}, định hướng phát triển {job_title}.",
             },
             "education": {
                 "institution": "Trường Cao Đẳng Tây Đô",
@@ -145,6 +149,7 @@ class CVGeneratorService:
                 "relevant_courses": relevant_courses,
             },
             "skills": {
+                "categorized": profile_categorized,
                 "technical": tech_skills,
                 "tools": [],
                 "soft": competency_summary.get("soft_skills", []),
@@ -154,6 +159,7 @@ class CVGeneratorService:
             "languages": profile.get("languages") or student.get("languages", []),
         }
         return cv_json
+
 
     # ── LLM API Callers ────────────────────────────────────────
     async def _call_openai_llm(self, prompt: str) -> Optional[str]:

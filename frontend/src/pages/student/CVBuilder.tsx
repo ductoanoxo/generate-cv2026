@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { defaultCVData, type CVData, type Experience, type Certification } from '../../mock/mockData';
 import { JDInputForm } from '../../components/JDInputForm';
-import { CVPreview } from '../../components/CVPreview';
+import { CVPreview, getFormattedSkillGroups } from '../../components/CVPreview';
 import { ATSScoreBadge } from '../../components/ATSScoreBadge';
 import { ValidationReport } from '../../components/ValidationReport';
 import { buildATSReport } from '../../utils/cvValidation';
@@ -33,9 +33,32 @@ interface SavedCVSummary { id: string; title: string; updatedAt: string; }
 // Keep the pipeline useful even when the JD parser returns only plain text.
 // These are explicit technology names, not fabricated student data.
 const extractJDTechnologySkills = (text: string): string[] => {
-  const known = ['Linux', 'Python', 'Docker', 'Kubernetes', 'CI/CD', 'Git', 'GitHub', 'Terraform', 'AWS', 'Azure', 'GCP', 'PostgreSQL', 'JavaScript', 'TypeScript', 'React', 'FastAPI', 'unit testing', 'infrastructure as code'];
+  const known = [
+    'Linux', 'Python', 'Docker', 'Kubernetes', 'CI/CD', 'Git', 'GitHub', 'Terraform', 'AWS', 'Azure', 'GCP', 
+    'PostgreSQL', 'Oracle', 'MySQL', 'MongoDB', 'JavaScript', 'TypeScript', 'React', 'FastAPI', 'Java', 'Spring Boot', 
+    'Jmix', 'Vaadin', 'C++', 'C#', 'Prometheus', 'Grafana', 'Draw.io', 'Figma', 'Core Banking', 'Thought Machine', 
+    'Foreign Exchange', 'FX Platform', 'Financial Accounting', 'Custody Banking', 'Anti-Money Laundering', 'AML', 
+    'Compliance', 'Customer Relationship Management', 'LARK', 'Enterprise Resource Planning', 'ODOO', 'Agile Scrum', 
+    'Technical Troubleshooting', 'Cross-functional Collaboration', 'unit testing', 'infrastructure as code'
+  ];
   const lower = text.toLowerCase();
   return known.filter(skill => lower.includes(skill.toLowerCase()));
+};
+
+
+const extractJobTitleFromJD = (jdText: string): string => {
+  const IGNORED_HEADINGS = [
+    'mô tả công việc', 'job description', 'thông tin tuyển dụng', 'vị trí tuyển dụng', 
+    'tuyển dụng', 'vị trí', 'jd', 'yêu cầu công việc', 'yêu cầu ứng viên', 'mô tả', 'quyền lợi'
+  ];
+  const lines = jdText.split(/\n|[.!?]/).map(l => l.trim()).filter(Boolean);
+  for (const line of lines) {
+    const lower = line.toLowerCase().replace(/[:\-\*#]/g, '').trim();
+    if (!IGNORED_HEADINGS.includes(lower) && line.length >= 3 && line.length <= 80) {
+      return line.replace(/^[:\-\*#\d\.\s]+/, '').trim();
+    }
+  }
+  return 'Kỹ sư CNTT';
 };
 
 export const CVBuilder: React.FC = () => {
@@ -172,11 +195,14 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
           full_name: cvData.profile.fullName,
           email: cvData.profile.email,
           phone: cvData.profile.phoneNumber,
+          major: cvData.profile.major || 'Công nghệ thông tin',
+          specialization: cvData.profile.faculty || 'Kỹ thuật phần mềm',
+          academic_year: cvData.profile.academicYear || '',
           overall_percentage: cvData.profile.gpa,
           languages: cvData.languages,
         },
         target_job: {
-          job_title: normalizedJd.split(/\n|[.!?]/).find(line => line.trim())?.trim().slice(0, 80) || 'Ứng viên CNTT',
+          job_title: extractJobTitleFromJD(normalizedJd),
           required_skills: requiredSkills,
         },
         jd_raw_text: normalizedJd,
@@ -205,6 +231,13 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
         : (result.competency_profile.languages || cvData.languages);
       const updatedCvGrades = matched.map(course => ({ subjectName: course.subjectName, score: course.combinedResult, credits: course.creditPoint }));
 
+      const generatedCategorized = Array.isArray(generated.skills?.categorized)
+        ? generated.skills.categorized.map((g: any) => ({
+            category: g.category || g.name || 'General Skills',
+            items: Array.isArray(g.items) ? g.items : Array.isArray(g.skills) ? g.skills : []
+          }))
+        : undefined;
+
       setMatchedCourses(matched);
       setCvData(previous => ({
         ...previous,
@@ -215,7 +248,8 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
           phoneNumber: generated.personal_info.phone || previous.profile.phoneNumber,
         },
         summary: generated.personal_info.summary || previous.summary,
-        skills: [...new Set([...generated.skills.technical, ...generated.skills.tools, ...profileSkills])],
+        skills: [...new Set([...(generated.skills?.technical || []), ...(generated.skills?.tools || []), ...profileSkills])],
+        categorizedSkills: generatedCategorized || previous.categorizedSkills,
         languages: generatedLanguages,
         projects: generated.projects.map(project => ({
           name: project.name,
@@ -258,11 +292,99 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
     }));
   };
 
+  const [perCategoryInput, setPerCategoryInput] = useState<Record<string, string>>({});
+  const [newCategoryName, setNewCategoryName] = useState<string>('');
+
+  const activeSkillGroups = useMemo(() => {
+    return getFormattedSkillGroups(cvData);
+  }, [cvData]);
+
+  const handleAddItemToCategory = (categoryName: string, itemStr: string) => {
+    const trimmed = itemStr.trim();
+    if (!trimmed) return;
+
+    const currentGroups = activeSkillGroups.map(g => ({
+      category: g.category,
+      items: [...g.items]
+    }));
+
+    let targetGroup = currentGroups.find(g => g.category === categoryName);
+    if (!targetGroup) {
+      targetGroup = { category: categoryName, items: [] };
+      currentGroups.push(targetGroup);
+    }
+
+    if (!targetGroup.items.includes(trimmed)) {
+      targetGroup.items.push(trimmed);
+    }
+
+    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+
+    setCvData(prev => ({
+      ...prev,
+      skills: allSkills,
+      categorizedSkills: currentGroups
+    }));
+
+    setPerCategoryInput(prev => ({ ...prev, [categoryName]: '' }));
+  };
+
+  const handleRemoveItemFromCategory = (categoryName: string, itemStr: string) => {
+    const currentGroups = activeSkillGroups.map(g => ({
+      category: g.category,
+      items: g.items.filter(i => i !== itemStr)
+    })).filter(g => g.items.length > 0);
+
+    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+
+    setCvData(prev => ({
+      ...prev,
+      skills: allSkills,
+      categorizedSkills: currentGroups
+    }));
+  };
+
+  const handleAddCategoryGroup = () => {
+    const trimmedCat = newCategoryName.trim();
+    if (!trimmedCat) return;
+
+    const currentGroups = activeSkillGroups.map(g => ({
+      category: g.category,
+      items: [...g.items]
+    }));
+
+    if (!currentGroups.some(g => g.category.toLowerCase() === trimmedCat.toLowerCase())) {
+      currentGroups.push({ category: trimmedCat, items: [] });
+    }
+
+    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+
+    setCvData(prev => ({
+      ...prev,
+      skills: allSkills,
+      categorizedSkills: currentGroups
+    }));
+
+    setNewCategoryName('');
+  };
+
+  const handleRemoveCategoryGroup = (categoryName: string) => {
+    const currentGroups = activeSkillGroups.filter(g => g.category !== categoryName);
+    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+
+    setCvData(prev => ({
+      ...prev,
+      skills: allSkills,
+      categorizedSkills: currentGroups
+    }));
+  };
+
   const handleAddSkill = () => {
     if (newSkill.trim() && !cvData.skills.includes(newSkill.trim())) {
       setCvData(prev => ({
         ...prev,
-        skills: [...prev.skills, newSkill.trim()]
+        skills: [...prev.skills, newSkill.trim()],
+        categorizedSkills: undefined,
       }));
       setNewSkill('');
     }
@@ -271,9 +393,12 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
   const handleRemoveSkill = (skill: string) => {
     setCvData(prev => ({
       ...prev,
-      skills: prev.skills.filter(s => s !== skill)
+      skills: prev.skills.filter(s => s !== skill),
+      categorizedSkills: undefined,
     }));
   };
+
+
 
   const handleAddLanguage = () => {
     if (newLanguage.trim() && !cvData.languages.includes(newLanguage.trim())) {
@@ -654,39 +779,106 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
               </div>
             </div>
 
-            {/* Section 3: Skills */}
+            {/* Section 3: Skills (COMPETENCES Grouped Input) */}
             <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
               <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <Sparkle size={18} />
-                <span>3. Kỹ năng chuyên môn</span>
+                <span>3. Kỹ năng chuyên môn (COMPETENCES)</span>
               </h3>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="Nhập kỹ năng mới (ví dụ: React, SQL)" 
-                  value={newSkill} 
-                  onChange={(e) => setNewSkill(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSkill()}
-                />
-                <button className="btn-icon-text primary" onClick={handleAddSkill} style={{ padding: '0 16px' }}>
-                  <Plus size={20} />
-                </button>
-              </div>
-              <div className="tag-list">
-                {cvData.skills.map((skill, idx) => (
-                  <span key={idx} className="tag" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>{skill}</span>
-                    <button 
-                      onClick={() => handleRemoveSkill(skill)}
-                      style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
-                    >
-                      <Trash size={14} />
-                    </button>
-                  </span>
+
+
+
+              {/* Grouped Skills Cards */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {activeSkillGroups.map((group) => (
+                  <div 
+                    key={group.category} 
+                    style={{ 
+                      padding: '12px', 
+                      background: 'rgba(15, 23, 42, 0.6)', 
+                      borderRadius: '8px', 
+                      border: '1px solid var(--color-border)' 
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#22C55E' }}>
+                        * {group.category} ({group.items.length})
+                      </span>
+                      <button 
+                        onClick={() => handleRemoveCategoryGroup(group.category)}
+                        title="Xóa nhóm kỹ năng này"
+                        style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '2px 4px' }}
+                      >
+                        <Trash size={14} />
+                      </button>
+                    </div>
+
+                    {/* Skill tags inside this category */}
+                    <div className="tag-list" style={{ marginBottom: '8px' }}>
+                      {group.items.map((skill, sIdx) => (
+                        <span key={sIdx} className="tag" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                          <span>{skill}</span>
+                          <button 
+                            onClick={() => handleRemoveItemFromCategory(group.category, skill)}
+                            style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          >
+                            <Trash size={12} />
+                          </button>
+                        </span>
+                      ))}
+                      {group.items.length === 0 && (
+                        <span style={{ fontSize: '0.75rem', color: '#64748B', fontStyle: 'italic' }}>Chưa có kỹ năng trong nhóm này.</span>
+                      )}
+                    </div>
+
+                    {/* Per-category add input */}
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <input 
+                        type="text" 
+                        className="input-field" 
+                        style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                        placeholder={`+ Thêm kỹ năng vào nhóm "${group.category}"...`}
+                        value={perCategoryInput[group.category] || ''}
+                        onChange={(e) => setPerCategoryInput(prev => ({ ...prev, [group.category]: e.target.value }))}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            handleAddItemToCategory(group.category, perCategoryInput[group.category] || '');
+                          }
+                        }}
+                      />
+                      <button 
+                        className="btn-icon-text secondary"
+                        style={{ padding: '0 10px', fontSize: '0.75rem' }}
+                        onClick={() => handleAddItemToCategory(group.category, perCategoryInput[group.category] || '')}
+                      >
+                        <Plus size={14} />
+                      </button>
+                    </div>
+                  </div>
                 ))}
+
+                {/* Create new custom category */}
+                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                  <input 
+                    type="text" 
+                    className="input-field" 
+                    placeholder="Tên nhóm kỹ năng mới (ví dụ: Domain Knowledge, Certifications)..."
+                    value={newCategoryName}
+                    onChange={(e) => setNewCategoryName(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategoryGroup()}
+                  />
+                  <button 
+                    className="btn-icon-text secondary"
+                    style={{ padding: '0 16px', whiteSpace: 'nowrap' }}
+                    onClick={handleAddCategoryGroup}
+                  >
+                    <Plus size={16} />
+                    <span>Tạo nhóm mới</span>
+                  </button>
+                </div>
               </div>
             </div>
+
 
             {/* Section 4: Languages */}
             <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
@@ -843,13 +1035,16 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
               {/* Grid for Skills & Languages */}
               <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
                 <div className="cv-pdf-section">
-                  <div className="cv-pdf-section-title">Kỹ năng kỹ thuật</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                    {cvData.skills.map((skill, idx) => (
-                      <span key={idx} className="cv-tag">{skill}</span>
+                  <div className="cv-pdf-section-title">COMPETENCES</div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
+                    {getFormattedSkillGroups(cvData).map(group => (
+                      <div key={group.category} style={{ fontSize: '0.85rem', color: '#1E293B', lineHeight: '1.5' }}>
+                        <strong style={{ color: '#0F172A', fontWeight: 700 }}>* {group.category}:</strong> {group.items.join(', ')}.
+                      </div>
                     ))}
                   </div>
                 </div>
+
                 <div className="cv-pdf-section">
                   <div className="cv-pdf-section-title">Ngoại ngữ</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', marginTop: '4px' }}>

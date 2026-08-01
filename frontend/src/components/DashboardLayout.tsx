@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -15,16 +15,27 @@ import {
   SignOut,
   User as UserIcon,
   Notebook,
-  Megaphone
+  Megaphone,
+  CaretLeft,
+  CaretRight
 } from '@phosphor-icons/react';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
+const SIDEBAR_KEY = 'sidebar_collapsed';
+
 export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const { user, logout, isAdmin, isDean, isDeptHead, isTeacher, isStudent } = useAuth();
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem(SIDEBAR_KEY) === 'true'; } catch { return false; }
+  });
+
+  useEffect(() => {
+    try { localStorage.setItem(SIDEBAR_KEY, String(collapsed)); } catch { /* noop */ }
+  }, [collapsed]);
 
   const handleLogout = () => {
     logout();
@@ -53,54 +64,71 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   };
 
   return (
-    <div className="app-container">
+    <div className={`app-container ${collapsed ? 'sidebar-collapsed' : ''}`}>
       {/* Sidebar */}
-      <aside className="sidebar">
+      <aside className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
         <div className="sidebar-logo">
           <GraduationCap size={32} weight="bold" />
-          <div>
-            <h2>Tây Đô</h2>
-            <p style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold' }}>COLLEGE PORTAL</p>
-          </div>
+          {!collapsed && (
+            <div>
+              <h2>Tây Đô</h2>
+              <p style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 'bold' }}>COLLEGE PORTAL</p>
+            </div>
+          )}
         </div>
+
+        {/* Toggle Button */}
+        <button
+          className="sidebar-toggle-btn"
+          onClick={() => setCollapsed(prev => !prev)}
+          title={collapsed ? 'Mở rộng menu' : 'Thu gọn menu'}
+        >
+          {collapsed ? <CaretRight size={16} weight="bold" /> : <CaretLeft size={16} weight="bold" />}
+        </button>
 
         <nav className="sidebar-menu">
           {/* Base path dynamically routes to specific dashboard */}
-          <NavLink to={getDashboardPath()} end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+          <NavLink to={getDashboardPath()} end className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Dashboard' : undefined}>
             <House size={20} />
-            <span>Dashboard</span>
+            {!collapsed && <span>Dashboard</span>}
           </NavLink>
 
           {/* Admin Menu */}
           {isAdmin && (
             <>
-              <NavLink to="/admin/logs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/admin/logs" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Audit Logs' : undefined}>
                 <Clock size={20} />
-                <span>Audit Logs</span>
+                {!collapsed && <span>Audit Logs</span>}
               </NavLink>
-              <NavLink to="/admin/devices" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/admin/devices" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Thiết Bị' : undefined}>
                 <DeviceMobile size={20} />
-                <span>Thiết Bị</span>
+                {!collapsed && <span>Thiết Bị</span>}
               </NavLink>
-              <NavLink to="/admin/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/admin/settings" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Cấu Hình' : undefined}>
                 <Gear size={20} />
-                <span>Cấu Hình</span>
+                {!collapsed && <span>Cấu Hình</span>}
               </NavLink>
-              <NavLink to="/admin/teachers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}><Users size={20} /><span>Giảng viên</span></NavLink>
-              <NavLink to="/admin/students" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}><GraduationCap size={20} /><span>Sinh viên</span></NavLink>
+              <NavLink to="/admin/teachers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Giảng viên' : undefined}>
+                <Users size={20} />
+                {!collapsed && <span>Giảng viên</span>}
+              </NavLink>
+              <NavLink to="/admin/students" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Sinh viên' : undefined}>
+                <GraduationCap size={20} />
+                {!collapsed && <span>Sinh viên</span>}
+              </NavLink>
             </>
           )}
 
           {/* Dean Menu */}
           {isDean && (
             <>
-              <NavLink to="/faculty/teachers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/faculty/teachers" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Giáo Viên' : undefined}>
                 <Users size={20} />
-                <span>Giáo Viên</span>
+                {!collapsed && <span>Giáo Viên</span>}
               </NavLink>
-              <NavLink to="/faculty/attendance" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/faculty/attendance" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Thống Kê Điểm Danh' : undefined}>
                 <ClipboardText size={20} />
-                <span>Thống Kê Điểm Danh</span>
+                {!collapsed && <span>Thống Kê Điểm Danh</span>}
               </NavLink>
             </>
           )}
@@ -108,13 +136,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           {/* Department Head Menu */}
           {isDeptHead && (
             <>
-              <NavLink to="/department/progress" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/department/progress" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Tiến Độ Dạy' : undefined}>
                 <Calendar size={20} />
-                <span>Tiến Độ Dạy</span>
+                {!collapsed && <span>Tiến Độ Dạy</span>}
               </NavLink>
-              <NavLink to="/department/questions" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/department/questions" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Ngân Hàng Đề' : undefined}>
                 <Database size={20} />
-                <span>Ngân Hàng Đề</span>
+                {!collapsed && <span>Ngân Hàng Đề</span>}
               </NavLink>
             </>
           )}
@@ -122,13 +150,13 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           {/* Teacher Menu */}
           {isTeacher && (
             <>
-              <NavLink to="/teacher/schedule" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/teacher/schedule" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Lịch Dạy' : undefined}>
                 <Calendar size={20} />
-                <span>Lịch Dạy</span>
+                {!collapsed && <span>Lịch Dạy</span>}
               </NavLink>
-              <NavLink to="/teacher/exams" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/teacher/exams" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Ngân Hàng Đề' : undefined}>
                 <ClipboardText size={20} />
-                <span>Ngân Hàng Đề</span>
+                {!collapsed && <span>Ngân Hàng Đề</span>}
               </NavLink>
             </>
           )}
@@ -136,30 +164,30 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
           {/* Student Menu */}
           {isStudent && (
             <>
-              <NavLink to="/student/announcements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/student/announcements" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Thông Báo' : undefined}>
                 <Megaphone size={20} />
-                <span>Thông Báo</span>
+                {!collapsed && <span>Thông Báo</span>}
               </NavLink>
-              <NavLink to="/student/scores" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/student/scores" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Xem Điểm' : undefined}>
                 <Notebook size={20} />
-                <span>Xem Điểm</span>
+                {!collapsed && <span>Xem Điểm</span>}
               </NavLink>
-              <NavLink to="/student/schedule" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/student/schedule" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Thời Khóa Biểu' : undefined}>
                 <Calendar size={20} />
-                <span>Thời Khóa Biểu</span>
+                {!collapsed && <span>Thời Khóa Biểu</span>}
               </NavLink>
-              <NavLink to="/student/cv" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <NavLink to="/student/cv" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Tạo CV Cá Nhân' : undefined}>
                 <FileText size={20} />
-                <span>Tạo CV Cá Nhân</span>
+                {!collapsed && <span>Tạo CV Cá Nhân</span>}
               </NavLink>
             </>
           )}
         </nav>
 
         <div className="sidebar-footer">
-          <button className="sidebar-link" onClick={handleLogout} style={{ border: 'none', background: 'none', width: '100%', textAlign: 'left' }}>
+          <button className="sidebar-link" onClick={handleLogout} style={{ border: 'none', background: 'none', width: '100%', textAlign: 'left' }} title={collapsed ? 'Đăng xuất' : undefined}>
             <SignOut size={20} />
-            <span>Đăng xuất</span>
+            {!collapsed && <span>Đăng xuất</span>}
           </button>
         </div>
       </aside>

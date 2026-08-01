@@ -1,8 +1,5 @@
 import json
 import sys
-import io
-
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 from app.services.competency_service import competency_service
 
@@ -64,8 +61,17 @@ def test_competency():
     assert profile["student"]["student_id"] == "SV001"
     assert len(profile["selected_courses"]) == 2
     assert len(profile["projects"]) == 1
-    assert len(profile["competency_summary"]["technical_skills"]) == 5
+    assert len(profile["competency_summary"]["technical_skills"]) == 4
+    assert "categorized_skills" in profile["competency_summary"]
+    
+    categorized = profile["competency_summary"]["categorized_skills"]
+    assert len(categorized) >= 1
+    categories_found = [c["category"] for c in categorized]
+    assert "Backend & Programming Skills" in categories_found
+    assert "Databases & Data Management" in categories_found
+    assert "DevOps, Tools & Monitoring" in categories_found
     print("\n✅ Competency Service Unit Test PASSED!")
 
 if __name__ == "__main__":
     test_competency()
+

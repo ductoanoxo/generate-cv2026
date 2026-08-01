@@ -108,13 +108,24 @@ Trả về KẾT QUẢ DUY NHẤT dưới dạng JSON hợp lệ (không kèm Ma
         """
         jd_words = set(re.findall(r'\b[a-zA-Z0-9+#.#-]{2,}\b', jd_text.lower()))
         
-        cv_skills = set([s.lower() for s in cv_data.get("skills", [])])
+        def extract_skill_strings(data) -> List[str]:
+            res = []
+            if isinstance(data, str):
+                if data.strip(): res.append(data.strip())
+            elif isinstance(data, list):
+                for item in data: res.extend(extract_skill_strings(item))
+            elif isinstance(data, dict):
+                for k, v in data.items():
+                    if k != "category": res.extend(extract_skill_strings(v))
+            return res
+
+        cv_skills = set([s.lower() for s in extract_skill_strings(cv_data.get("skills", []))])
         if competency_profile:
             skills_from_prof = competency_profile.get("skills", [])
             if not skills_from_prof and "competency_summary" in competency_profile:
                 tech_skills = competency_profile["competency_summary"].get("technical_skills", [])
                 skills_from_prof = [item["skill"] for item in tech_skills if isinstance(item, dict) and "skill" in item]
-            cv_skills.update([s.lower() for s in skills_from_prof])
+            cv_skills.update([s.lower() for s in extract_skill_strings(skills_from_prof)])
 
 
         # Extract words from projects & summary

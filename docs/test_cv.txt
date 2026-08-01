@@ -1,0 +1,88 @@
+About the job
+At Paymentology, we’re redefining what’s possible in the payments space. As the first truly global issuer-processor, we give banks and fintechs the technology and talent to launch and manage Mastercard and Visa cards at scale - across more than 60 countries.
+
+Our advanced, multi-cloud platform delivers real-time data, unmatched scalability, and the flexibility of shared or dedicated processing instances. It's this global reach and innovation that sets us apart.
+
+Infrastructure Configuration
+
+Design, implement, and maintain infrastructure as code (IaC) to automate the deployment and management of infrastructure components. 
+Maintain and optimize cloud infrastructure to ensure high availability, scalability, and performance. 
+Manage version-controlled infrastructure configurations and ensure consistency across development, staging, and production environments. 
+Troubleshoot issues across the full technology stack including hardware, software, applications, and networking. 
+Perform system administration tasks such as server setup, configuration, and maintenance. 
+Implement and manage containerization and orchestration platforms such as Docker and Kubernetes. 
+Implement and manage event streaming platforms such as Amazon MSK and/or Apache Kafka, including cluster configuration, topic and partition management, broker operations, access control, monitoring, scaling, and reliability engineering. 
+You get to apply AI-assisted tools to streamline routine engineering tasks, support technical planning and implementation, accelerate troubleshooting, and create clear instructions, prompts, and reusable skills/workflows that improve team productivity. 
+
+CI/CD Pipeline Development
+
+Design, implement, and maintain CI/CD pipelines that automate build, test, and deployment processes. 
+Enable seamless integration and delivery of code from development environments through to production. 
+Monitor and optimize CI/CD pipelines to remove bottlenecks and improve deployment efficiency. 
+Integrate version control systems with automation tools to enable continuous testing and deployment. 
+
+Automation and Scripting
+
+Develop scripts and automation tools to reduce manual tasks and increase operational efficiency. 
+Implement automated testing and deployment practices to ensure reliability and consistency. 
+Continuously identify repetitive processes and automate them to minimize human error. 
+
+Monitoring and Maintenance
+
+Implement monitoring and observability tools to ensure system reliability and performance. 
+Respond to incidents and service disruptions while minimizing downtime and business impact. 
+Troubleshoot, diagnose, and resolve production incidents and outages efficiently. 
+
+Collaboration and Communication
+
+Work closely with development, QA, and operations teams to support a smooth and efficient development lifecycle. 
+Promote a culture of collaboration, continuous improvement, and shared ownership of system reliability. 
+
+Security and Compliance
+
+Implement security best practices throughout CI/CD pipelines and infrastructure management. 
+Ensure systems and processes comply with relevant industry standards and security requirements. 
+
+Requirements:
+
+What it takes to succeed:
+
+﻿7+ years of hands-on experience in DevOps, SRE, or infrastructure engineering roles. 
+Strong proficiency in scripting and automation using Bash and Python. 
+Practical experience with AWS cloud services (e.g., EC2, S3, IAM, RDS, VPC, EKS, MSK). 
+Solid experience with Infrastructure as Code (IaC) tools, particularly Terraform. 
+Hands-on experience deploying, managing, and troubleshooting Kubernetes (K8s) clusters and workloads. 
+Hands-on experience deploying, managing, and troubleshooting Amazon MSK and/or Apache Kafka clusters, including brokers, topics, partitions, consumer groups, replication, security configuration, monitoring, and performance issues. 
+Ability to effectively use AI-assisted tools for routine engineering tasks, implementation support, technical planning, troubleshooting, and the creation of clear instructions, prompts, and reusable skills/workflows. 
+Strong understanding of CI/CD pipelines and modern DevOps practices. 
+Proficiency with Git and version control best practices in collaborative environments. 
+Comfortable working in Linux/Unix environments; familiarity with Windows systems is a plus. 
+Basic understanding of programming concepts (e.g., Java or similar languages). 
+Understanding Agile development methodologies and team workflows. 
+
+Professional Skills:
+
+Strong problem-solving and troubleshooting abilities in distributed systems. 
+High attention to detail with solid organizational skills. 
+Continuous learning mindset with a focus on improving systems, automation, and processes. 
+Effective collaboration within distributed and cross-functional teams. 
+Clear written and verbal communication skills in English. 
+
+At Paymentology we value making a difference to the lives of the people who work for us and who live in the communities where we operate. You can look forward to working with a diverse, global team where Paymentologists at all levels play an important part in our global mission to advance the world through payments and make a difference on a global scale.
+
+We are an equal opportunity employer committed to fostering a diverse and inclusive workplace where everyone can thrive. We welcome applications from people of all backgrounds and do not discriminate on any unlawful ground, including race, colour, ethnicity, sex, gender, pregnancy, marital status, family responsibility, age, disability, sexual orientation, religion, belief, language or HIV status.
+
+Paymentology will never request any form of payment from applicants at any stage of our recruitment process, including for applications, interviews, training or job placements. If anyone asks you for money while claiming to act on behalf of Paymentology, please treat this as fraudulent and do not make any payment. All legitimate Paymentology vacancies are advertised via our official careers page , and our recruitment emails are sent only from official Paymentology domains.
+
+
+
+
+
+
+COMPETENCES
+* Backend & Programming Skills: Java (Core, Spring Boot), Jmix, Vaadin, JavaScript, C++, C#.
+* Databases & Data Management: PostgreSQL, Oracle, MySQL, MongoDB.
+* Domain Knowledge: Core Banking (Thought Machine), Core Banking (Symbols), Foreign Exchange (FX Platform), Financial Accounting (FA), Custody Banking, Anti-Money Laundering (AML) Compliance.
+* DevOps, Tools & Monitoring: Prometheus, Grafana (API Monitoring & Telegram Alerts), GitHub, Draw.io, Figma.
+* Business Skills: Customer Relationship Management (LARK), Enterprise Resource Planning (ODOO).
+* Soft Skills & Methodologies: Agile Scrum, Technical Troubleshooting, Cross-functional Collaboration (with QC/QA & Frontend teams), Clear communication in English.
