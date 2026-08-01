@@ -48,6 +48,7 @@ namespace backend.Data
                 new { Username = "sv_toan", FullName = "Đặng Đức Toàn", Role = 1, InternalId = "SV01" },
                 new { Username = "sinhvien1", FullName = "Sinh viên thử nghiệm", Role = 1, InternalId = "SVDB1" }
                 , new { Username = "sinhvien246", FullName = "Sinh viên 246", Role = 1, InternalId = "SV000246" }
+                , new { Username = "sinhvien194", FullName = "Sinh viên 194", Role = 1, InternalId = "SV000194" }
             };
 
             bool changed = false;

@@ -1,3 +1,4 @@
+import re
 import logging
 from typing import Dict, Any, List, Optional, TypedDict
 
@@ -61,8 +62,34 @@ def node_search_courses(state: CVPipelineState) -> CVPipelineState:
         return {"matched_courses": state.get("selected_courses") or []}
 
     try:
-        search_res = vector_search_service.search(query=jd_text, limit=5)
+        # Build focused search query from required_skills
+        target_job = state.get("target_job", {})
+        required_skills = target_job.get("required_skills", [])
         
+        if required_skills:
+            search_query = f"Kỹ năng công nghệ: {', '.join(required_skills)}"
+        else:
+            search_query = jd_text[:500]
+        
+        logger.info(f"[Step 2] Search query ({len(search_query)} chars): {search_query[:200]}...")
+        
+        # Search Qdrant with limit=20
+        search_res = vector_search_service.search(query=search_query, limit=20)
+        
+        # Multi-query per individual skill for higher precision
+        if required_skills:
+            seen_ids = {r.get("id") for r in search_res if "id" in r}
+            for skill in required_skills[:10]:  # Cap at top 10 skills
+                if not skill or not skill.strip():
+                    continue
+                skill_results = vector_search_service.search(query=skill.strip(), limit=3)
+                for sr in skill_results:
+                    if sr.get("id") not in seen_ids:
+                        search_res.append(sr)
+                        seen_ids.add(sr.get("id"))
+        
+        logger.info(f"[Step 2] Total Qdrant results (after multi-query): {len(search_res)}")
+
         user_courses = state.get("selected_courses") or []
         if not user_courses:
             return {"matched_courses": []}
@@ -80,6 +107,7 @@ def node_search_courses(state: CVPipelineState) -> CVPipelineState:
             }
 
         matched_courses = []
+        matched_codes = set()
         for item in search_res:
             payload = item.get("payload", {})
             result_keys = {
@@ -91,6 +119,11 @@ def node_search_courses(state: CVPipelineState) -> CVPipelineState:
             if not selected_course:
                 continue
 
+            course_code = str(selected_course.get("course_id") or selected_course.get("subjectCode") or payload.get("subject_code", "")).strip().lower()
+            if course_code in matched_codes:
+                continue  # Deduplicate
+            matched_codes.add(course_code)
+
             enriched_course = dict(selected_course)
             enriched_course["course_id"] = enriched_course.get("course_id") or payload.get("subject_code")
             enriched_course["course_name"] = enriched_course.get("course_name") or payload.get("subject_name")
@@ -101,10 +134,12 @@ def node_search_courses(state: CVPipelineState) -> CVPipelineState:
             enriched_course["clos"] = clos
             matched_courses.append(enriched_course)
 
+        logger.info(f"[Step 2] Matched {len(matched_courses)} courses: {list(matched_codes)}")
         return {"matched_courses": matched_courses or user_courses}
     except Exception as e:
         logger.warning(f"Vector search failed in pipeline: {e}. Using selected courses.")
         return {"matched_courses": state.get("selected_courses") or []}
+
 
 
 

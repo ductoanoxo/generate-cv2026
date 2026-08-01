@@ -14,4 +14,4 @@ python scripts/seed_vectors.py "${QDRANT_TARGET_URL}" || echo "Warning: Vector s
 
 # Start FastAPI Application
 echo "Launching FastAPI Uvicorn server on port 8000..."
-exec uvicorn app.main:app --host 0.0.0.0 --port 8000
+exec uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload

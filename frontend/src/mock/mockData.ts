@@ -413,10 +413,16 @@ export interface Experience {
   description: string;
 }
 
+export interface CategorizedSkillGroup {
+  category: string;
+  items: string[];
+}
+
 export interface CVData {
   profile: Student;
   summary: string;
   skills: string[];
+  categorizedSkills?: CategorizedSkillGroup[];
   languages: string[];
   projects: { name: string; description: string; role: string; technologies: string[] }[];
   certifications: Certification[];
