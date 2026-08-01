@@ -78,6 +78,36 @@ class VectorSearchService:
             for r in results
         ]
 
+    def search_multi_query(
+        self,
+        queries: List[str],
+        limit_per_query: int = 3,
+        type_filter: Optional[str] = None,
+        department: Optional[str] = None,
+        score_threshold: float = 0.0
+    ) -> List[Dict[str, Any]]:
+        """
+        Run multiple queries and merge results, deduplicating by point ID,
+        keeping the highest score for each unique result.
+        """
+        all_results: Dict[Any, Dict[str, Any]] = {}
+        for q in queries:
+            if not q or not q.strip():
+                continue
+            results = self.search(
+                query=q,
+                limit=limit_per_query,
+                type_filter=type_filter,
+                department=department,
+                score_threshold=score_threshold
+            )
+            for r in results:
+                rid = r["id"]
+                if rid not in all_results or r["score"] > all_results[rid]["score"]:
+                    all_results[rid] = r
+        return sorted(all_results.values(), key=lambda x: x["score"], reverse=True)
+
+
     def search_with_rerank(
         self,
         query: str,

@@ -1,56 +1,76 @@
 import json
 
 CV_SYSTEM_PROMPT = """
-Bạn là chuyên gia viết CV và cố vấn nghề nghiệp cao cấp cho sinh viên ngành Công nghệ thông tin mới tốt nghiệp.
-Nhiệm vụ của bạn là nhận vào một "Competency Profile" (Hồ sơ năng lực) gồm: thông tin sinh viên, công việc ứng tuyển (target job), danh sách môn học đã hoàn thành với điểm số, danh sách dự án cá nhân và bảng tổng hợp kỹ năng.
+Bạn là một chuyên gia viết CV và cố vấn tuyển dụng IT hàng đầu, có nhiều năm kinh nghiệm giúp sinh viên/ứng viên trẻ chinh phục nhà tuyển dụng.
+Nhiệm vụ của bạn là phân tích "Competency Profile" (Hồ sơ năng lực) của ứng viên và sinh ra nội dung CV định dạng JSON hoàn chỉnh, chuyên nghiệp, bám sát mô tả công việc (JD).
 
-Dựa trên dữ liệu này, hãy tạo ra một file JSON CV chuyên nghiệp hoàn chỉnh.
+NGÔN NGỮ ĐẦU RA: Toàn bộ nội dung sinh ra (bao gồm summary, mô tả dự án, highlights...) PHẢI được viết bằng Tiếng Việt, văn phong trang trọng, súc tích, đúng chuẩn CV chuyên nghiệp. Không sử dụng Tiếng Anh, trừ các thuật ngữ kỹ thuật/tên công nghệ không có bản dịch tương đương (ví dụ: React, Docker, CI/CD...).
 
-QUY TẮC BẮT BUỘC:
-1. KHÔNG ĐƯỢC BỊA ĐẶT THÔNG TIN: Chỉ sử dụng các thông tin, kỹ năng, môn học, dự án có trong Competency Profile.
-2. Tối ưu hóa từ khóa và ngôn từ hành động (action verbs: Developed, Implemented, Designed, Built, Optimized) cho từng dự án và môn học.
-3. Tóm tắt bản thân (summary) ngắn gọn, thu hút nhà tuyển dụng trong 3 giây đầu tiên, nêu rõ vị trí ứng tuyển và GPA.
-4. Nêu bật các môn học có điểm số cao (≥ 8.0) và liên quan trực tiếp đến vị trí tuyển dụng.
-5. Định dạng đầu ra PHẢI LÀ JSON NGUYÊN BẢN (Raw JSON), tuân thủ đúng cấu trúc JSON schema được quy định. KHÔNG kèm theo lời giải thích hoặc markdown block không hợp lệ.
+HƯỚNG DẪN VIẾT PHẦN TÓM TẮT BẢN THÂN (personal_info.summary):
+Viết một đoạn văn tóm tắt bản thân gồm đúng 4 câu, mạch lạc, tự nhiên như một đoạn văn liền mạch (không liệt kê gạch đầu dòng, không đánh số câu), bám sát dữ liệu thực tế của ứng viên và JD, tuân theo trình tự lập luận sau:
 
-CẤU TRÚC JSON ĐẦU RA YÊU CẦU:
+1. Hồ sơ & nền tảng chuyên môn: Giới thiệu ngắn gọn năm học/ngành học của ứng viên, gắn với nền tảng kiến thức cốt lõi phù hợp với vị trí ứng tuyển (target_job) và các kỹ năng trọng tâm được yêu cầu trong JD.
+   Ví dụ định hướng: "Là sinh viên năm [X] ngành [Ngành học], tôi có nền tảng vững chắc về [chuyên môn liên quan đến JD]."
+
+2. Kinh nghiệm thực chiến & quy trình kỹ thuật: Nêu bật kinh nghiệm thực tế thông qua việc xây dựng, triển khai các hệ thống hoặc quy trình end-to-end (từ khâu đầu đến khâu triển khai), được trích xuất từ các dự án/môn học cụ thể trong hồ sơ năng lực.
+   Ví dụ định hướng: "Tôi có kinh nghiệm thực tế trong việc xây dựng [hệ thống/quy trình] hoàn chỉnh, từ [giai đoạn đầu] đến [giai đoạn triển khai]."
+
+3. Kỹ năng mềm & tinh thần học hỏi: Thể hiện tinh thần chủ động tự học, khả năng thích ứng nhanh với công nghệ mới và môi trường làm việc năng động.
+   Ví dụ định hướng: "Tôi là người chủ động tự học, có khả năng thích nghi nhanh với công nghệ mới và môi trường làm việc năng động."
+
+4. Cam kết chất lượng & định hướng phát triển: Khẳng định tinh thần sẵn sàng đón nhận thử thách, cam kết mang lại sản phẩm chất lượng cao và không ngừng trau dồi chuyên môn.
+   Ví dụ định hướng: "Tôi luôn sẵn sàng đón nhận thử thách, cam kết mang lại kết quả chất lượng cao và không ngừng hoàn thiện năng lực chuyên môn."
+
+Lưu ý khi viết: tránh sáo rỗng, tránh lặp từ giữa các câu, ưu tiên số liệu/kết quả cụ thể nếu có trong hồ sơ (ví dụ: GPA, số lượng dự án, kết quả đạt được).
+
+QUY TẮC CHUNG:
+1. TRÍCH XUẤT ĐÚNG THỰC TẾ: Không tự bịa ra dự án, kỹ năng hay thông tin không có trong Competency Profile.
+2. SỬ DỤNG TỪ KHÓA HÀNH ĐỘNG bằng tiếng Việt (ví dụ: Xây dựng, Triển khai, Thiết kế, Phát triển, Tối ưu hóa).
+3. ĐẦU RA PHẢI LÀ RAW JSON BẮT BUỘC tuân thủ JSON Schema dưới đây (không thêm markdown, không thêm giải thích ngoài JSON):
+
 {
   "personal_info": {
-    "full_name": "Tên sinh viên",
-    "title": "Vị trí ứng tuyển (ví dụ: Backend Developer)",
-    "email": "email@example.com",
-    "phone": "090xxxxxxx",
-    "summary": "Tóm tắt bản thân ấn tượng..."
+    "full_name": "Tên ứng viên",
+    "title": "Tên vị trí tuyển dụng",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "summary": "Đoạn văn 4 câu bằng Tiếng Việt theo cấu trúc hướng dẫn ở trên..."
   },
   "education": {
     "institution": "Trường Cao Đẳng Tây Đô",
-    "major": "Công nghệ thông tin - Kỹ thuật phần mềm",
-    "gpa": "3.5/4.0 (8.5/10)",
+    "major": "Công nghệ thông tin",
+    "gpa": "3.5/4.0",
     "graduation_year": "2026",
     "relevant_courses": [
       {
         "name": "Tên môn học",
-        "grade": "8.8/10",
+        "grade": "8.5/10",
         "highlights": ["Điểm nhấn 1", "Điểm nhấn 2"]
       }
     ]
   },
   "skills": {
-    "technical": ["Công nghệ 1", "Công nghệ 2"],
-    "tools": ["Git", "Docker", "VS Code"],
-    "soft": ["Kỹ năng mềm 1", "Kỹ năng mềm 2"]
+    "categorized": [
+      { "category": "Backend & Programming Skills", "items": ["Java (Core, Spring Boot)", "JavaScript", "Python"] },
+      { "category": "Databases & Data Management", "items": ["PostgreSQL", "MySQL", "MongoDB"] },
+      { "category": "DevOps, Tools & Monitoring", "items": ["Docker", "Kubernetes", "Git", "GitHub"] },
+      { "category": "Soft Skills & Methodologies", "items": ["Agile Scrum", "Technical Troubleshooting", "Teamwork"] }
+    ],
+    "technical": ["Java", "Python", "PostgreSQL"],
+    "tools": ["Docker", "Git"],
+    "soft": ["Agile Scrum"]
   },
   "projects": [
     {
       "name": "Tên dự án",
-      "role": "Vai trò (ví dụ: Backend Developer)",
-      "description": "Mô tả dự án...",
-      "technologies": ["Công nghệ 1", "Công nghệ 2"],
-      "highlights": ["Điểm nổi bật 1", "Điểm nổi bật 2"]
+      "role": "Vai trò",
+      "description": "Mô tả dự án",
+      "technologies": ["Tech 1", "Tech 2"],
+      "highlights": ["Highlight 1", "Highlight 2"]
     }
   ],
   "certifications": [],
-  "languages": ["Tiếng Việt (Mẹ đẻ)", "Tiếng Anh (Đọc hiểu tài liệu chuyên ngành)"]
+  "languages": ["Tiếng Việt", "Tiếng Anh"]
 }
 """
 
@@ -59,19 +79,18 @@ def build_cv_user_prompt(competency_profile: dict) -> str:
     """Build context-aware user prompt from competency profile dict."""
     student = competency_profile.get("student", {})
     job = competency_profile.get("target_job", {})
-    
-    return f"""
-Hãy tạo CV dạng JSON cho sinh viên {student.get('full_name', '')} ứng tuyển vị trí "{job.get('job_title', 'Software Engineer')}".
+    skills = job.get("required_skills", [])
+    skill_str = ", ".join(skills[:5]) if isinstance(skills, list) else str(skills)
 
-HƯỚNG DẪN BẮT BUỘC:
-- Tóm tắt bản thân (summary) cần thể hiện vị trí mục tiêu "{job.get('job_title', '')}" và điểm GPA {student.get('overall_gpa', 3.2)}/4.0.
-- Nêu bật top 3-4 môn học có điểm số cao nhất và đáp ứng tốt yêu cầu tuyển dụng.
-- Mỗi dự án cần liệt kê 2-3 câu highlights sử dụng động từ hành động (Action Verbs) thể hiện rõ vai trò và công nghệ đã dùng.
-- Kỹ năng kỹ thuật (technical skills) phải tập trung vào các công nghệ có điểm tin cậy cao (confidence >= 0.6) trong Competency Summary.
+    return f"""
+Hãy đóng vai chuyên gia viết CV, sinh nội dung CV cho ứng viên {student.get('full_name', '')} ứng tuyển vị trí "{job.get('job_title', 'Software Engineer')}".
+
+YÊU CẦU VIẾT PHẦN SUMMARY (personal_info.summary):
+Viết một đoạn văn liền mạch gồm 4 câu bằng Tiếng Việt, theo đúng trình tự lập luận đã nêu trong System Prompt (Nền tảng chuyên môn -> Kinh nghiệm thực chiến end-to-end -> Tinh thần tự học & thích ứng -> Cam kết chất lượng), bám sát các kỹ năng yêu cầu từ JD ({skill_str}) và dữ liệu hồ sơ năng lực dưới đây. Không dịch nguyên văn dữ liệu, hãy diễn đạt lại một cách tự nhiên, chuyên nghiệp.
 
 --- COMPETENCY PROFILE ---
 {json.dumps(competency_profile, indent=2, ensure_ascii=False)}
 ---------------------------
 
-Hãy tạo JSON CV hoàn chỉnh, chuyên nghiệp và tối ưu nhất!
+Hãy tạo JSON CV hoàn chỉnh, tự nhiên, chuyên nghiệp và đúng schema đã quy định!
 """

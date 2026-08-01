@@ -19,17 +19,22 @@ class ValidatorService:
         Validate skills and claims in CV against competency profile evidence.
         """
         skills_raw = cv_data.get("skills", [])
-        if isinstance(skills_raw, dict):
-            skills_in_cv = []
-            for sub_skills in skills_raw.values():
-                if isinstance(sub_skills, list):
-                    skills_in_cv.extend(sub_skills)
-                elif isinstance(sub_skills, str):
-                    skills_in_cv.append(sub_skills)
-        elif isinstance(skills_raw, list):
-            skills_in_cv = skills_raw
-        else:
-            skills_in_cv = []
+        def extract_skill_strings(data) -> List[str]:
+            res = []
+            if isinstance(data, str):
+                if data.strip():
+                    res.append(data.strip())
+            elif isinstance(data, list):
+                for item in data:
+                    res.extend(extract_skill_strings(item))
+            elif isinstance(data, dict):
+                for k, v in data.items():
+                    if k == "category":
+                        continue
+                    res.extend(extract_skill_strings(v))
+            return res
+
+        skills_in_cv = list(dict.fromkeys(extract_skill_strings(skills_raw)))
             
         projects = cv_data.get("projects", [])
 
@@ -74,6 +79,8 @@ class ValidatorService:
         skills_with_evidence_count = 0
 
         for skill in skills_in_cv:
+            if not isinstance(skill, str):
+                continue
             skill_lower = skill.lower()
             matched_sources = []
 

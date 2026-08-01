@@ -63,3 +63,49 @@ def test_vector_search_enriches_selected_course_without_replacing_real_grade(mon
             "clos": ["Xây dựng ứng dụng web với React và API."],
         }
     ]
+
+
+def test_vector_search_with_required_skills(monkeypatch):
+    queries_logged = []
+
+    def mock_search(query, limit=5, **kwargs):
+        queries_logged.append((query, limit))
+        if "Docker" in query or "Kỹ năng công nghệ" in query:
+            return [
+                {
+                    "id": 1,
+                    "score": 0.88,
+                    "payload": {
+                        "subject_code": "502CNTH20",
+                        "subject_name": "Điện toán đám mây & DevOps",
+                        "content": "Triển khai CI/CD và Docker container.",
+                    },
+                }
+            ]
+        return []
+
+    monkeypatch.setattr(vector_search_service, "search", mock_search)
+
+    result = node_search_courses(
+        {
+            "jd_raw_text": "Paymentology DevOps Engineer JD long text...",
+            "target_job": {
+                "job_title": "DevOps Engineer",
+                "required_skills": ["Docker", "Kubernetes", "AWS"]
+            },
+            "selected_courses": [
+                {
+                    "course_id": "502CNTH20",
+                    "course_name": "Điện toán đám mây & DevOps",
+                    "grade": 8.5,
+                }
+            ],
+        }
+    )
+
+    assert len(result["matched_courses"]) == 1
+    assert result["matched_courses"][0]["course_id"] == "502CNTH20"
+    assert result["matched_courses"][0]["similarity_score"] == 0.88
+    # Ensure query was built from required_skills
+    assert "Kỹ năng công nghệ: Docker, Kubernetes, AWS" in queries_logged[0][0]
+
