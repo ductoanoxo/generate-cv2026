@@ -466,6 +466,8 @@ export const CVBuilder: React.FC = () => {
     }));
   };
 
+
+
   const handleAddLanguage = () => {
     if (newLanguage.trim() && !cvData.languages.includes(newLanguage.trim())) {
       setCvData(prev => ({
