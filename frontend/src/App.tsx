@@ -27,6 +27,7 @@ import { QuestionsPage } from './pages/department/QuestionsPage';
 import { TeacherDashboard } from './pages/teacher/TeacherDashboard';
 import { TeacherSchedulePage } from './pages/teacher/TeacherSchedulePage';
 import { TeacherExamsPage } from './pages/teacher/TeacherExamsPage';
+import { InternshipVerificationsPage } from './pages/teacher/InternshipVerificationsPage';
 
 // Student Pages
 import { StudentDashboard } from './pages/student/StudentDashboard';
@@ -208,6 +209,17 @@ const App: React.FC = () => {
               <ProtectedRoute allowedRoles={[10, 2]}>
                 <DashboardLayout>
                   <TeacherExamsPage />
+                </DashboardLayout>
+              </ProtectedRoute>
+            }
+          />
+          {/* Internship Mẫu 07 verification (roles 10/20/50) */}
+          <Route
+            path="/teacher/internship-verifications"
+            element={
+              <ProtectedRoute allowedRoles={[10, 2, 20, 50]}>
+                <DashboardLayout>
+                  <InternshipVerificationsPage />
                 </DashboardLayout>
               </ProtectedRoute>
             }

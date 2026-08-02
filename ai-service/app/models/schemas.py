@@ -39,6 +39,8 @@ class ExperienceSchema(BaseModel):
     role: str = ""
     period: str = ""
     description: str = ""
+    companyAddress: str = ""
+    mentorName: str = ""
 
 
 class GradeSchema(BaseModel):
@@ -56,6 +58,7 @@ class ProfileSchema(BaseModel):
     faculty: str = ""
     major: str = ""
     academicYear: str = ""
+    studentCode: str = ""
     gpa: float = 0.0
     avatar: Optional[str] = None
 
@@ -70,3 +73,8 @@ class CVDataSchema(BaseModel):
     experience: List[ExperienceSchema] = []
     grades: List[GradeSchema] = []
     activities: List[str] = []
+
+
+class Mau07RequestSchema(BaseModel):
+    profile: ProfileSchema = Field(default_factory=ProfileSchema)
+    experience: ExperienceSchema = Field(default_factory=ExperienceSchema)

@@ -411,6 +411,17 @@ export interface Experience {
   role: string;
   period: string;
   description: string;
+  companyAddress?: string;
+  mentorName?: string;
+  verificationId?: string;
+  verificationStatus?: number; // -1 = Chờ nộp, 0 = Đã nộp, 1 = Đã duyệt, 2 = Từ chối
+  verificationName?: string;
+  verificationNote?: string;
+}
+
+export interface CategorizedSkillGroup {
+  category: string;
+  items: string[];
 }
 
 export interface CategorizedSkillGroup {

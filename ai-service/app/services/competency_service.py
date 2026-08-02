@@ -332,6 +332,7 @@ class CompetencyService:
                 "description": proj.get("description", ""),
                 "technologies": techs,
                 "github_url": proj.get("github_url") or proj.get("html_url", ""),
+                "highlights": proj.get("highlights") or [],
                 "matched_skills": matched_skills,
             }
             processed_projects.append(p_dict)

@@ -1,12 +1,38 @@
 import logging
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import Response
-from app.models.schemas import CVDataSchema
+from app.models.schemas import CVDataSchema, Mau07RequestSchema
 from app.services.export_service import export_service
+from app.services.mau07_service import mau07_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/export", tags=["Export"])
+
+
+@router.post("/mau07")
+async def export_mau07(data: Mau07RequestSchema):
+    """Generate the Mẫu 07 expert internship-evaluation form as DOCX.
+
+    Must be registered before /{format} so it is not swallowed by the catch-all.
+    """
+    try:
+        content = mau07_service.generate(
+            data.profile.model_dump(),
+            data.experience.model_dump(),
+        )
+        filename = "Mau07_TTTN_DanhGiaThucTap.docx"
+        return Response(
+            content=content,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={
+                "Content-Disposition": f'attachment; filename="{filename}"',
+                "Content-Length": str(len(content)),
+            },
+        )
+    except Exception as e:
+        logger.exception("Mau07 export failed")
+        raise HTTPException(status_code=500, detail=f"Mau07 export failed: {str(e)}")
 
 
 @router.post("/{format}")

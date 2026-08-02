@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { CVData } from '../mock/mockData';
+import type { CVData, Experience } from '../mock/mockData';
 
 const AI_BASE = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
 
@@ -62,6 +62,7 @@ export interface ScrapeGithubResponse {
     sections: Record<string, string>;
   };
   project_summary: string;
+  highlights: string[];
   tech_stack: Record<string, string[]>;
   file_tree: string[];
 }
@@ -206,5 +207,39 @@ export const parseJobDescription = async (rawText: string, file?: File) => {
 
 export const exportCVPdf = async (cvData: CVData) => {
   const response = await aiClient.post('/api/export/pdf', cvData, { responseType: 'blob', params: { template: 'modern' } });
+  return response.data as Blob;
+};
+
+const formatBirthDateForDocx = (value?: string): string => {
+  if (!value) return '';
+  const iso = value.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return value;
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+};
+
+export const exportMau07Docx = async (cvData: CVData, experience: Experience, studentCodeOverride?: string) => {
+  const response = await aiClient.post('/api/export/mau07', {
+    profile: {
+      fullName: cvData.profile.fullName,
+      email: cvData.profile.email,
+      phoneNumber: cvData.profile.phoneNumber,
+      gender: cvData.profile.gender,
+      birthDate: formatBirthDateForDocx(cvData.profile.birthDate),
+      faculty: cvData.profile.faculty,
+      major: cvData.profile.major,
+      academicYear: cvData.profile.academicYear,
+      studentCode: studentCodeOverride || cvData.profile.studentCode || '',
+      gpa: cvData.profile.gpa,
+    },
+    experience: {
+      company: experience.company,
+      role: experience.role,
+      period: experience.period,
+      description: experience.description,
+      companyAddress: experience.companyAddress || '',
+      mentorName: experience.mentorName || '',
+    },
+  }, { responseType: 'blob' });
   return response.data as Blob;
 };

@@ -13,6 +13,7 @@ import {
   Database, 
   Clock, 
   SignOut,
+  ShieldCheck,
   User as UserIcon,
   Notebook,
   Megaphone,
@@ -159,6 +160,14 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
                 {!collapsed && <span>Ngân Hàng Đề</span>}
               </NavLink>
             </>
+          )}
+
+          {/* Mẫu 07 verification menu (Teacher / Dept Head / Dean) */}
+          {(isTeacher || isDeptHead || isDean) && (
+            <NavLink to="/teacher/internship-verifications" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`} title={collapsed ? 'Xác Thực Thực Tập Mẫu 07' : undefined}>
+              <ShieldCheck size={20} />
+              {!collapsed && <span>Xác Thực Thực Tập (Mẫu 07)</span>}
+            </NavLink>
           )}
 
           {/* Student Menu */}
