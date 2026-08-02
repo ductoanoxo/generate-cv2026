@@ -162,8 +162,14 @@ async def node_scrape_github(state: CVPipelineState) -> CVPipelineState:
             scraped_proj = {
                 "name": repo_info.get("name", "GitHub Project"),
                 "role": "Fullstack Contributor",
-                "description": repo_info.get("description") or f"Repository {repo_info.get('full_name', '')}",
-                "technologies": all_techs
+                "description": (
+                    scraped.get("project_summary")
+                    or repo_info.get("description")
+                    or f"Repository {repo_info.get('full_name', '')}"
+                ),
+                "technologies": all_techs,
+                "github_url": repo_info.get("html_url", github_url),
+                "highlights": scraped.get("highlights") or [],
             }
             combined_projects = user_projects + [scraped_proj]
             return {"projects": combined_projects, "scraped_project": scraped}

@@ -60,6 +60,8 @@ class CVGeneratorService:
                     project["role"] = source.get("role", project["role"])
                     project["description"] = source.get("description", project["description"])
                     project["technologies"] = list(source.get("technologies", []))
+                    if source.get("highlights"):
+                        project["highlights"] = source["highlights"]
         return copy.deepcopy(grounded)
 
     # ── Fallback Engine ────────────────────────────────────────
@@ -107,10 +109,12 @@ class CVGeneratorService:
         for p in projects:
             techs = p.get("technologies", [])
             tech_str = ", ".join(techs[:3]) if techs else "các công nghệ hiện đại"
-            highlights = [
-                f"Thiết kế và triển khai các tính năng core sử dụng {tech_str}.",
-                f"Đảm bảo chất lượng mã nguồn, viết documentation và tối ưu hiệu năng hệ thống.",
-            ]
+            highlights = list(p.get("highlights") or [])
+            if not highlights:
+                highlights = [
+                    f"Thiết kế và triển khai các tính năng core sử dụng {tech_str}.",
+                    f"Đảm bảo chất lượng mã nguồn, viết documentation và tối ưu hiệu năng hệ thống.",
+                ]
             if p.get("github_url"):
                 highlights.append(f"Mã nguồn mở trên GitHub: {p['github_url']}")
             formatted_projects.append({

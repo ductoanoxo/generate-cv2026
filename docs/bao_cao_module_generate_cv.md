@@ -298,6 +298,54 @@ Quá trình người dùng (Sinh viên) tương tác với module Generate CV đ
 
 ---
 
+## 4.6. Vòng xác thực thực tập Mẫu 07 (Kinh nghiệm thực tập đã xác thực)
+
+Mục **"6. Kinh nghiệm thực tập & làm việc"** không chỉ là dữ liệu khai báo mà còn hỗ trợ một **vòng xác thực đầy đủ** để mỗi dòng kinh nghiệm có thể đạt trạng thái **"Đã xác thực"** và hiển thị badge xác minh trên CV.
+
+### 4.6.1. Quy trình 4 bước
+
+```
+[Sinh viên nhập Mục 6]           [AI Service tạo Mẫu 07]
+        │                                 │
+        ▼                                 ▼
+   Nhập thêm: Địa chỉ DN, Chuyên gia hướng dẫn ──► POST /api/export/mau07
+                                                       (template-fill docx 100% đúng mẫu)
+        │
+        ▼
+[Chuyên gia DN ký & đóng mộc trên giấy]
+        │
+        ▼
+[Sinh viên chụp/quét → nộp file đã ký lên hệ thống]
+        │  POST /api/internship-verifications (multipart, lưu bytea)
+        ▼
+[GV / Trưởng BM / Trưởng khoa (roles 10/20/50) duyệt]
+        │  GET /pending → GET /{id}/file → POST /{id}/approve | /reject
+        ▼
+[CV hiển thị badge "✓ Đã xác thực" + tên người duyệt]
+```
+
+### 4.6.2. Nguyên tắc "một dữ liệu – hai đầu ra" (One Data – Two Outputs)
+
+- Dữ liệu **Kinh nghiệm thực tập** người dùng nhập ở Mục 6 là nguồn dữ liệu duy nhất.
+- **Đầu ra 1 – CV**: Phần "Kinh nghiệm thực tập & làm việc" trong CV PDF/DOCX dùng trực tiếp dữ liệu này.
+- **Đầu ra 2 – Phiếu Mẫu 07**: `POST /api/export/mau07` dùng **chính** dữ liệu Mục 6 (cộng thêm 2 trường mới *Địa chỉ doanh nghiệp* và *Chuyên gia hướng dẫn*) để điền vào **template DOCX gốc** của Trường, giữ nguyên 100% bố cục, watermark và các khối chữ ký — **không render lại từ đầu** nhằm đảm bảo tính pháp lý.
+
+### 4.6.3. Vì sao xác thực bởi 3 vai trò (10/20/50)?
+
+- **Giáo viên (10)**: Là người hướng dẫn, nắm rõ nội dung thực tập của sinh viên.
+- **Trưởng Bộ Môn (20)**: Kiểm soát tính hợp lệ của phiếu đánh giá theo quy chế khoa.
+- **Trưởng Khoa (50)**: Người chịu trách nhiệm cuối cùng, xác nhận chính thức.
+- Bất kỳ ai trong 3 vai trò duyệt đều ghi nhận `ApproverId`, `ApprovalName` và `ApprovalDate` vào hồ sơ, tạo chuỗi trách nhiệm rõ ràng.
+
+### 4.6.4. Lưu trữ & hiển thị
+
+- File DOCX đã ký được lưu dưới dạng **`bytea`** trong bảng `InternshipVerifications` (PostgreSQL Supabase) kèm `FileName`, `ContentType`, `Status` (0=Đã nộp, 1=Đã xác thực, 2=Từ chối), `Note`, `SubmissionDate`, `ApprovalDate`.
+- Sinh viên có thể **tải lại phiếu đã duyệt**; giảng viên **tải phiếu** để đối chiếu trước khi duyệt.
+- CV preview (live) và CV PDF/DOCX hiển thị chip **"✓ Đã xác thực"** màu xanh cạnh tên công ty khi `verificationStatus === 1`.
+
+
+---
+
 ## 5. Kết luận
 
 ### 5.1. Kết quả đạt được

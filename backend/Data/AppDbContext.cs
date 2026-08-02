@@ -20,6 +20,7 @@ namespace backend.Data
         public DbSet<Faculty> Faculties { get; set; } = null!;
         public DbSet<FormRequest> FormRequests { get; set; } = null!;
         public DbSet<FormTemplate> FormTemplates { get; set; } = null!;
+        public DbSet<InternshipVerification> InternshipVerifications { get; set; } = null!;
         public DbSet<Major> Majors { get; set; } = null!;
         public DbSet<PasswordReset> PasswordResets { get; set; } = null!;
         public DbSet<QuestionAnswer> QuestionAnswers { get; set; } = null!;
@@ -209,6 +210,16 @@ namespace backend.Data
             {
                 entity.ToTable("FormTemplates");
                 entity.HasKey(e => e.Id);
+            });
+
+            // InternshipVerification configuration
+            modelBuilder.Entity<InternshipVerification>(entity =>
+            {
+                entity.ToTable("InternshipVerifications");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.DocumentBytes).HasColumnType("bytea");
+                entity.HasIndex(e => e.StudentId, "IX_InternshipVerifications_StudentId");
+                entity.HasIndex(e => e.Status, "IX_InternshipVerifications_Status");
             });
 
             // Major configuration

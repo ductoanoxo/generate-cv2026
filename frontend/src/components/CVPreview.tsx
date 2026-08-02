@@ -104,6 +104,9 @@ export const CVPreview: React.FC<CVPreviewProps> = ({ cvData, selectedGrades, ch
           {cvData.experience.map(exp => (
             <div key={`${exp.company}-${exp.role}`} className="cv-preview-item">
               <strong>{exp.company}</strong>
+              {exp.verificationStatus === 1 && (
+                <span className="cv-verified-chip">✓ Đã duyệt</span>
+              )}
               <div>{exp.role} {exp.period && `(${exp.period})`}</div>
               <p>{exp.description}</p>
             </div>

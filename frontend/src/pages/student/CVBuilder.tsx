@@ -5,7 +5,8 @@ import { CVPreview, getFormattedSkillGroups } from '../../components/CVPreview';
 import { ATSScoreBadge } from '../../components/ATSScoreBadge';
 import { ValidationReport } from '../../components/ValidationReport';
 import { buildATSReport } from '../../utils/cvValidation';
-import { exportCVPdf, generateCVFullPipeline, parseJobDescription } from '../../services/aiService';
+import { exportCVPdf, exportMau07Docx, generateCVFullPipeline, parseJobDescription } from '../../services/aiService';
+import { getMyVerifications, submitVerification, type InternshipVerification } from '../../services/internshipVerificationService';
 import { MatchedCoursesTable, type MatchedCourse } from '../../components/MatchedCoursesTable';
 import { ProjectForm, type Project } from '../../components/ProjectForm';
 import { InternshipForm } from '../../components/InternshipForm';
@@ -29,6 +30,18 @@ import {
 } from '@phosphor-icons/react';
 
 interface SavedCVSummary { id: string; title: string; updatedAt: string; }
+
+interface StudentProfileResponse {
+  fullName: string;
+  studentCode: string;
+  majorName: string;
+  academicYearName: string;
+  birthDate: string | null;
+  gender: string | null;
+  email: string;
+  hometown: string | null;
+  phoneNumber: string | null;
+}
 
 // Keep the pipeline useful even when the JD parser returns only plain text.
 // These are explicit technology names, not fabricated student data.
@@ -64,8 +77,7 @@ const extractJobTitleFromJD = (jdText: string): string => {
 export const CVBuilder: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'jd-match' | 'cv-editor'>('jd-match');
-const [cvData, setCvData] = useState<CVData>(defaultCVData);
-  const [newSkill, setNewSkill] = useState<string>('');
+  const [cvData, setCvData] = useState<CVData>(defaultCVData);
   const [newLanguage, setNewLanguage] = useState<string>('');
   const [newActivity, setNewActivity] = useState<string>('');
   const [selectedGrades, setSelectedGrades] = useState<string[]>(cvData.grades.map(g => g.subjectName));
@@ -73,6 +85,7 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
   const [savedCVId, setSavedCVId] = useState<string | null>(null);
   const [savedCVs, setSavedCVs] = useState<SavedCVSummary[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [verifications, setVerifications] = useState<InternshipVerification[]>([]);
 
   // JD Matching states inside CV Builder
   const [jdText, setJdText] = useState<string>('');
@@ -82,6 +95,12 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
   const [apiMessage, setApiMessage] = useState<string>('');
   const [shouldRegenerateAfterProject, setShouldRegenerateAfterProject] = useState(false);
   const atsReport = useMemo(() => buildATSReport(cvData, jdText), [cvData, jdText]);
+
+  // Only internship items that have been approved (verificationStatus === 1) are shown on the CV
+  const cvExperience = useMemo(
+    () => (cvData.experience || []).filter(exp => exp.verificationStatus === 1),
+    [cvData.experience]
+  );
 
 
   // Fetch real student scores from .NET API or Supabase DB
@@ -152,6 +171,74 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
       }));
     }
   }, [user]);
+
+  // Auto-fill Lớp (academicYear), major, studentCode, birthDate... from the student record
+  useEffect(() => {
+    if (!user) return;
+    let active = true;
+    axios.get<{ profile: StudentProfileResponse }>(
+      `http://localhost:5000/api/student/dashboard?studentId=${user.id}`
+    )
+      .then(res => {
+        const p = res.data?.profile;
+        if (!p || !active) return;
+        setCvData(prev => ({
+          ...prev,
+          profile: {
+            ...prev.profile,
+            fullName: prev.profile.fullName || p.fullName,
+            email: prev.profile.email || p.email,
+            phoneNumber: prev.profile.phoneNumber || p.phoneNumber || '',
+            gender: prev.profile.gender || p.gender || '',
+            birthDate: prev.profile.birthDate || (p.birthDate ? p.birthDate.slice(0, 10) : ''),
+            hometown: prev.profile.hometown || p.hometown || '',
+            studentCode: prev.profile.studentCode || p.studentCode,
+            major: prev.profile.major || p.majorName,
+            academicYear: prev.profile.academicYear || p.academicYearName
+          }
+        }));
+      })
+      .catch(() => { /* backend may be off */ });
+    return () => { active = false; };
+  }, [user]);
+
+  // Load the student's internship verifications and merge status into experiences.
+  // Re-poll periodically and on window focus so approvals made elsewhere show up.
+  useEffect(() => {
+    let active = true;
+    const load = () => {
+      getMyVerifications()
+        .then(list => { if (active) setVerifications(list); })
+        .catch(() => { /* backend may be off */ });
+    };
+    load();
+    const timer = setInterval(load, 20000);
+    window.addEventListener('focus', load);
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', load); };
+  }, []);
+
+  useEffect(() => {
+    if (verifications.length === 0) return;
+    setCvData(prev => {
+      const newExperiences = (prev.experience || []).map(exp => {
+        const match = verifications.find(v =>
+          v.company.trim().toLowerCase() === (exp.company || '').trim().toLowerCase() &&
+          v.role.trim().toLowerCase() === (exp.role || '').trim().toLowerCase() &&
+          (v.period || '').trim().toLowerCase() === (exp.period || '').trim().toLowerCase()
+        );
+        if (!match) return exp;
+        return {
+          ...exp,
+          verificationId: match.id,
+          verificationStatus: match.status,
+          verificationName: match.approvalName,
+          verificationNote: match.note,
+        };
+      });
+      if (JSON.stringify(newExperiences) === JSON.stringify(prev.experience)) return prev;
+      return { ...prev, experience: newExperiences };
+    });
+  }, [verifications, cvData.experience]);
 
   // Handle Analyzing JD & Matching Courses
   const handleAnalyzeJD = async (inputJdText: string, _fileName?: string, file?: File) => {
@@ -231,8 +318,8 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
         : (result.competency_profile.languages || cvData.languages);
       const updatedCvGrades = matched.map(course => ({ subjectName: course.subjectName, score: course.combinedResult, credits: course.creditPoint }));
 
-      const generatedCategorized = Array.isArray(generated.skills?.categorized)
-        ? generated.skills.categorized.map((g: any) => ({
+      const generatedCategorized = Array.isArray((generated.skills as any)?.categorized)
+        ? (generated.skills as any).categorized.map((g: any) => ({
             category: g.category || g.name || 'General Skills',
             items: Array.isArray(g.items) ? g.items : Array.isArray(g.skills) ? g.skills : []
           }))
@@ -329,7 +416,7 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
     setPerCategoryInput(prev => ({ ...prev, [categoryName]: '' }));
   };
 
-  const handleRemoveItemFromCategory = (categoryName: string, itemStr: string) => {
+  const handleRemoveItemFromCategory = (_categoryName: string, itemStr: string) => {
     const currentGroups = activeSkillGroups.map(g => ({
       category: g.category,
       items: g.items.filter(i => i !== itemStr)
@@ -378,27 +465,6 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
       categorizedSkills: currentGroups
     }));
   };
-
-  const handleAddSkill = () => {
-    if (newSkill.trim() && !cvData.skills.includes(newSkill.trim())) {
-      setCvData(prev => ({
-        ...prev,
-        skills: [...prev.skills, newSkill.trim()],
-        categorizedSkills: undefined,
-      }));
-      setNewSkill('');
-    }
-  };
-
-  const handleRemoveSkill = (skill: string) => {
-    setCvData(prev => ({
-      ...prev,
-      skills: prev.skills.filter(s => s !== skill),
-      categorizedSkills: undefined,
-    }));
-  };
-
-
 
   const handleAddLanguage = () => {
     if (newLanguage.trim() && !cvData.languages.includes(newLanguage.trim())) {
@@ -468,6 +534,39 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
     }));
   };
 
+  // Export Mẫu 07 (expert internship evaluation) as DOCX for the given experience
+  const handleExportMau07 = async (exp: Experience) => {
+    const blob = await exportMau07Docx(cvData, exp, user?.username);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Mau07_TTTN_${(exp.company || 'KinhNghiem').replace(/\s+/g, '_')}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Submit a signed Mẫu 07 for lecturer approval
+  const handleSubmitVerification = async (exp: Experience, file: File) => {
+    const result = await submitVerification({
+      studentName: cvData.profile.fullName || user?.fullName || 'Sinh viên',
+      studentCode: cvData.profile.studentCode || user?.username || '',
+      experience: exp,
+      file,
+    });
+    setCvData(prev => ({
+      ...prev,
+      experience: (prev.experience || []).map(e =>
+        e.company === exp.company && e.role === exp.role && (e.period || '') === (exp.period || '')
+          ? { ...e, verificationId: result.id, verificationStatus: result.status }
+          : e
+      ),
+    }));
+    setApiMessage('Đã nộp phiếu Mẫu 07. Đang chờ trưởng khoa duyệt. Mục thực tập sẽ hiển thị trên CV sau khi được duyệt.');
+    getMyVerifications().then(list => setVerifications(list)).catch(() => {});
+  };
+
   // Handlers for Certifications
   const handleAddCert = (cert: Certification) => {
     setCvData(prev => ({
@@ -533,7 +632,7 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
     setIsExportingPdf(true);
 
     try {
-      const blob = await exportCVPdf(cvData);
+      const blob = await exportCVPdf({ ...cvData, experience: cvExperience });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
@@ -759,6 +858,15 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
                     onChange={(e) => handleProfileFieldChange('hometown', e.target.value)} 
                   />
                 </div>
+                <div className="form-group">
+                  <label>Ngày sinh</label>
+                  <input 
+                    type="date" 
+                    className="input-field" 
+                    value={cvData.profile.birthDate ? cvData.profile.birthDate.slice(0, 10) : ''} 
+                    onChange={(e) => handleProfileFieldChange('birthDate', e.target.value)} 
+                  />
+                </div>
               </div>
             </div>
 
@@ -926,6 +1034,8 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
               experiences={cvData.experience || []}
               onAddExperience={handleAddExperience}
               onRemoveExperience={handleRemoveExperience}
+              onExportMau07={handleExportMau07}
+              onSubmitVerification={handleSubmitVerification}
             />
 
             {/* Section 7: CertForm Component */}
@@ -1009,7 +1119,7 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
           </div>
 
           {/* CV Live Preview Column */}
-          <CVPreview cvData={cvData} selectedGrades={selectedGrades}>
+          <CVPreview cvData={{ ...cvData, experience: cvExperience }} selectedGrades={selectedGrades}>
             {/* Printable Container A4 */}
             <div id="printable-cv" className="cv-a4-sheet" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
               {/* CV Header */}
@@ -1073,13 +1183,16 @@ const [cvData, setCvData] = useState<CVData>(defaultCVData);
               </div>
 
               {/* Internship Experience (Live Preview A4) */}
-              {cvData.experience && cvData.experience.length > 0 && (
+              {cvExperience.length > 0 && (
                 <div className="cv-pdf-section">
                   <div className="cv-pdf-section-title">Kinh nghiệm thực tập & làm việc</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                    {cvData.experience.map((exp, idx) => (
-                      <div key={idx} style={{ padding: '6px 10px', background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '4px' }}>
-                        <div style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0F172A' }}>{exp.company}</div>
+                    {cvExperience.map((exp, idx) => (
+                      <div key={idx} style={{ padding: '6px 10px', background: '#F8FAFC', border: '1px solid #22C55E', borderRadius: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                          <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0F172A' }}>{exp.company}</span>
+                          <span className="cv-verified-chip">✓ Đã duyệt</span>
+                        </div>
                         <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: 600 }}>
                           {exp.role} {exp.period ? `(${exp.period})` : ''}
                         </div>
