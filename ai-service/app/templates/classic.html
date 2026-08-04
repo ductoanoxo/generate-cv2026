@@ -5,9 +5,18 @@
 <style>
   @page {
     size: A4;
-    margin: 0;
+    margin-top: 10mm;
+    margin-bottom: 12mm;
+    margin-left: 10mm;
+    margin-right: 10mm;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
   body {
     font-family: 'Times New Roman', 'Georgia', 'Palatino', serif;
     font-size: 11pt;
@@ -15,16 +24,31 @@
     color: #2d2d2d;
     background: #ffffff;
   }
+  h1, h2, h3, .section-title {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
+  }
+  .section-block, .section, .table-container {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+  }
+  .exp-item, .project-item {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
   .page {
-    width: 210mm;
-    min-height: 297mm;
-    padding: 30mm 25mm 20mm;
+    width: 100%;
+    height: auto;
+    padding: 0;
   }
   .header {
     text-align: center;
     border-bottom: 2px solid #1a1a1a;
     padding-bottom: 14px;
     margin-bottom: 16px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .header .name {
     font-size: 20pt;
@@ -48,6 +72,8 @@
   }
   .section {
     margin-bottom: 14px;
+    page-break-inside: auto;
+    break-inside: auto;
   }
   .section-title {
     font-size: 12pt;
@@ -58,6 +84,8 @@
     border-bottom: 1px solid #999;
     padding-bottom: 2px;
     margin-bottom: 8px;
+    page-break-after: avoid;
+    break-after: avoid;
   }
   .summary-text {
     font-size: 10.5pt;
@@ -78,7 +106,10 @@
   }
   .project-item, .exp-item {
     margin-bottom: 10px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
+
   .project-name {
     font-weight: 700;
     font-size: 11pt;
@@ -126,6 +157,20 @@
     border-collapse: collapse;
     font-size: 10.5pt;
     margin-top: 4px;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+  .grade-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .grade-table thead {
+    display: table-header-group;
+  }
+  .grade-table tfoot {
+    display: table-footer-group;
   }
   .grade-table th {
     background: #f5f5f5;
@@ -148,6 +193,8 @@
     font-size: 10.5pt;
     color: #444;
     margin-bottom: 3px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .activity-item {
     font-size: 10pt;
@@ -155,6 +202,8 @@
     margin-bottom: 3px;
     padding-left: 16px;
     position: relative;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .activity-item::before {
     content: "–";
@@ -170,16 +219,56 @@
 </head>
 <body>
 <div class="page">
-  <div class="header">
-    <div class="name">{{ profile.fullName }}</div>
-    <div class="major">{{ profile.major }}</div>
-    <div class="contact">
-      <span>📧 {{ profile.email }}</span>
-      <span>📞 {{ profile.phoneNumber }}</span>
-      {% if profile.birthDate %}<span>🎂 {{ profile.birthDate }}</span>{% endif %}
-      {% if profile.gender %}<span>👤 {{ profile.gender }}</span>{% endif %}
+  <div class="header" style="text-align: left; border-bottom: 2px solid #1a1a1a; padding-bottom: 10px; margin-bottom: 14px;">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+      <span class="name">{{ profile.fullName }}</span>
+      {% if profile.phoneNumber %}<span style="font-size:10pt; color:#555;">{{ profile.phoneNumber }}</span>{% endif %}
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:10pt; color:#555; font-weight:600;">{% if profile.studentCode %}Mã SV: {{ profile.studentCode }}{% endif %}</span>
+      {% if profile.email %}<span style="font-size:10pt; color:#555;">{{ profile.email }}</span>{% endif %}
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:10pt; color:#555;">Ngành: {{ profile.major }}{% if profile.faculty %} • Khoa: {{ profile.faculty }}{% endif %}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:10pt; font-weight:700; color:#1a1a1a;">Trường Cao đẳng Tây Đô</span>
     </div>
   </div>
+
+  <div class="section">
+    <div class="section-title">Học vấn / Education</div>
+    {% if education and education|length > 0 %}
+      {% for edu in education %}
+      <div class="exp-item">
+        <div class="exp-header">
+          <span class="exp-company">• {{ edu.school }}</span>
+          {% if edu.period %}<span class="exp-period">{{ edu.period }}</span>{% endif %}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10pt; color: #444; margin-top: 2px;">
+          <span>Chuyên ngành: {{ edu.major }}{% if edu.degree %} [{{ edu.degree }}]{% endif %}</span>
+          {% if edu.gpa %}
+          <span><strong>GPA:</strong> {{ edu.gpa }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="exp-item">
+        <div class="exp-header">
+          <span class="exp-company">• Trường Cao đẳng Tây Đô</span>
+          {% if profile.academicYear %}<span class="exp-period">{{ profile.academicYear }}</span>{% endif %}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10pt; color: #444; margin-top: 2px;">
+          <span>Chuyên ngành: {{ profile.major }}{% if profile.faculty %} ({{ profile.faculty }}){% endif %}</span>
+          {% if profile.gpa and profile.gpa > 0 %}
+          <span><strong>GPA:</strong> {{ "%.2f"|format(profile.gpa) }} / 4.0</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
 
   {% if summary %}
   <div class="section">
@@ -187,24 +276,6 @@
     <p class="summary-text">{{ summary }}</p>
   </div>
   {% endif %}
-
-  <div class="section">
-    <div class="section-title">Thông tin cá nhân</div>
-    <table style="width:100%;font-size:10.5pt;color:#444;">
-      {% if profile.faculty %}
-      <tr><td style="width:100px;font-weight:600;">Khoa</td><td>{{ profile.faculty }}</td></tr>
-      {% endif %}
-      {% if profile.major %}
-      <tr><td style="font-weight:600;">Ngành</td><td>{{ profile.major }}</td></tr>
-      {% endif %}
-      {% if profile.academicYear %}
-      <tr><td style="font-weight:600;">Khóa</td><td>{{ profile.academicYear }}</td></tr>
-      {% endif %}
-      {% if profile.gpa %}
-      <tr><td style="font-weight:600;">GPA</td><td>{{ "%.2f"|format(profile.gpa) }}</td></tr>
-      {% endif %}
-    </table>
-  </div>
 
   {% if skills %}
   <div class="section">
@@ -217,57 +288,36 @@
   </div>
   {% endif %}
 
-  {% if languages %}
-  <div class="section">
-    <div class="section-title">Ngôn ngữ</div>
-    {% for lang in languages %}
-    <div class="lang-item">{{ lang }}</div>
-    {% endfor %}
-  </div>
-  {% endif %}
-
-  {% if grades %}
-  <div class="section">
-    <div class="section-title">Kết quả học tập</div>
-    <table class="grade-table">
-      <thead>
-        <tr>
-          <th>Môn học</th>
-          <th style="width:70px">Điểm</th>
-          <th style="width:50px">TC</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for g in grades %}
-        <tr>
-          <td>{{ g.subjectName }}</td>
-          <td>{{ "%.1f"|format(g.score) }}</td>
-          <td>{{ g.credits }}</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-  {% endif %}
-
   {% if projects %}
   <div class="section">
-    <div class="section-title">Dự án</div>
+    <div class="section-title">Dự án / Projects</div>
     {% for p in projects %}
     <div class="project-item">
-      <div class="project-name">{{ p.name }}</div>
-      <div class="project-role">{{ p.role }}</div>
-      <div class="project-desc">{{ p.description }}</div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline;">
+        <span class="project-name">• {{ p.name }}</span>
+        {% if p.startDate %}
+        <span style="font-size: 9.5pt; color: #666; font-style: italic;">
+          {{ p.startDate[5:7] }}/{{ p.startDate[0:4] }} - {% if p.endDate %}{{ p.endDate[5:7] }}/{{ p.endDate[0:4] }}{% else %}now{% endif %}
+        </span>
+        {% endif %}
+      </div>
       {% if p.technologies %}
       <div class="project-tech">
-        <strong>Công nghệ:</strong>
+        <strong>Công nghệ & Công cụ:</strong>
         {% for tech in p.technologies %}{{ tech }}{% if not loop.last %}, {% endif %}{% endfor %}
       </div>
+      {% endif %}
+      {% if p.role %}
+      <div class="project-role">Vai trò: {{ p.role }}</div>
+      {% endif %}
+      {% if p.description %}
+      <div class="project-desc">• {{ p.description }}</div>
       {% endif %}
     </div>
     {% endfor %}
   </div>
   {% endif %}
+
 
   {% if experience %}
   <div class="section">

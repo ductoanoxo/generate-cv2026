@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.services.competency_service import competency_service
-from app.services.cv_generator_service import cv_generator_service
+from app.services.cv_generator_service import LLMGenerationError, cv_generator_service
 
 from app.services.ats_optimizer_service import ats_optimizer_service
 from app.services.validator_service import validator_service
@@ -132,6 +132,9 @@ async def generate_cv_content(payload: GenerateCVRequest):
             status="success",
             cv=cv_json
         )
+    except LLMGenerationError as e:
+        logger.warning("CV generation stopped because the LLM response was unavailable or invalid: %s", e)
+        raise HTTPException(status_code=502, detail=str(e))
     except Exception as e:
         logger.error(f"Error generating CV: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to generate CV: {str(e)}")
@@ -201,6 +204,9 @@ async def generate_cv_full_pipeline(payload: FullPipelineRequest):
             validation_report=final_state.get("validation_report", {}),
             competency_profile=final_state.get("competency_profile", {})
         )
+    except LLMGenerationError as e:
+        logger.warning("Full CV pipeline stopped because the LLM response was unavailable or invalid: %s", e)
+        raise HTTPException(status_code=502, detail=str(e))
     except Exception as e:
         logger.error(f"Error running full CV pipeline: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Full pipeline failed: {str(e)}")

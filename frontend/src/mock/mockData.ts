@@ -429,18 +429,66 @@ export interface CategorizedSkillGroup {
   items: string[];
 }
 
+export interface Project {
+  name: string;
+  role: string;
+  description: string;
+  technologies: string[];
+  startDate?: string; // YYYY-MM
+  endDate?: string;   // YYYY-MM; empty/undefined means "now"
+}
+
+export const formatProjectPeriod = (startDate?: string, endDate?: string): string => {
+  if (!startDate || !startDate.trim()) return '';
+
+  const formatMonthYear = (val: string): string | null => {
+    const trimmed = val.trim();
+    if (!trimmed) return null;
+    const parts = trimmed.split('-');
+    if (parts.length === 2) {
+      const year = parts[0];
+      const month = parts[1].padStart(2, '0');
+      if (year.length === 4 && !isNaN(Number(year)) && !isNaN(Number(month))) {
+        return `${month}/${year}`;
+      }
+    }
+    if (/^\d{2}\/\d{4}$/.test(trimmed)) {
+      return trimmed;
+    }
+    return null;
+  };
+
+  const startFormatted = formatMonthYear(startDate);
+  if (!startFormatted) return '';
+
+  const endFormatted = endDate && endDate.trim() ? formatMonthYear(endDate) : 'now';
+  if (!endFormatted) return startFormatted;
+
+  return `${startFormatted} - ${endFormatted}`;
+};
+
+export interface EducationItem {
+  school: string;
+  major: string;
+  period?: string;
+  gpa?: string | number;
+  degree?: string;
+}
+
 export interface CVData {
   profile: Student;
   summary: string;
   skills: string[];
   categorizedSkills?: CategorizedSkillGroup[];
   languages: string[];
-  projects: { name: string; description: string; role: string; technologies: string[] }[];
+  projects: Project[];
+  education?: EducationItem[];
   certifications: Certification[];
   experience: Experience[];
   grades: { subjectName: string; score: number; credits: number }[];
   activities: string[];
 }
+
 
 export const defaultCVData: CVData = {
   profile: {
@@ -457,3 +505,4 @@ export const defaultCVData: CVData = {
   activities: [],
   grades: []
 };
+

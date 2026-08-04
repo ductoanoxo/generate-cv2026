@@ -9,13 +9,11 @@ import {
   Link as LinkIcon 
 } from '@phosphor-icons/react';
 import { scrapeGithub } from '../services/aiService';
+import type { Project } from '../mock/mockData';
+import { formatProjectPeriod } from '../mock/mockData';
 
-export interface Project {
-  name: string;
-  role: string;
-  description: string;
-  technologies: string[];
-}
+export type { Project };
+
 
 interface ProjectFormProps {
   projects: Project[];
@@ -32,7 +30,9 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
     name: '',
     role: '',
     description: '',
-    technologies: ''
+    technologies: '',
+    startDate: '',
+    endDate: ''
   });
   const [githubUrl, setGithubUrl] = useState<string>('');
   const [isScraping, setIsScraping] = useState<boolean>(false);
@@ -49,10 +49,12 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
         name: newProject.name.trim(),
         role: newProject.role.trim(),
         description: newProject.description.trim(),
-        technologies: techArray
+        technologies: techArray,
+        startDate: newProject.startDate || undefined,
+        endDate: newProject.endDate || undefined
       });
 
-      setNewProject({ name: '', role: '', description: '', technologies: '' });
+      setNewProject({ name: '', role: '', description: '', technologies: '', startDate: '', endDate: '' });
     }
   };
 
@@ -69,15 +71,16 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
     try {
       const response = await scrapeGithub({ github_url: githubUrl.trim() });
       const technologies = Object.values(response.tech_stack || {}).flat().filter(Boolean);
-      const project = {
+      const techList = Array.from(new Set(technologies)).join(', ');
+      setNewProject({
         name: response.repo.name || response.repo.full_name || 'Dự án từ GitHub',
         role: 'Full-stack Developer',
         description: response.project_summary || response.repo.description || `Dự án GitHub: ${response.repo.full_name}`,
-        technologies: Array.from(new Set(technologies)),
-      };
-      setNewProject({ ...project, technologies: project.technologies.join(', ') });
-      onAddProject(project);
-      setScrapeStatusMessage('✅ Đã đọc GitHub thật và thêm dự án vào CV!');
+        technologies: techList,
+        startDate: '',
+        endDate: ''
+      });
+      setScrapeStatusMessage('✨ Đã tự động điền thông tin từ GitHub vào form bên dưới! Hãy kiểm tra, chỉnh sửa và bấm "Thêm dự án vào CV".');
     } catch (err) {
       console.warn('GitHub scrape failed', err);
       setScrapeStatusMessage('Không thể đọc repository GitHub. Kiểm tra URL hoặc thử lại.');
@@ -85,6 +88,7 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
       setIsScraping(false);
     }
   };
+
 
   return (
     <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
@@ -173,6 +177,29 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
             onChange={(e) => setNewProject(prev => ({ ...prev, role: e.target.value }))}
           />
         </div>
+
+        {/* Date range inputs */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#94A3B8', display: 'block', marginBottom: '4px' }}>Tháng/Năm bắt đầu</label>
+            <input 
+              type="month" 
+              className="input-field" 
+              value={newProject.startDate}
+              onChange={(e) => setNewProject(prev => ({ ...prev, startDate: e.target.value }))}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: '0.75rem', color: '#94A3B8', display: 'block', marginBottom: '4px' }}>Tháng/Năm kết thúc (bỏ trống nếu "now")</label>
+            <input 
+              type="month" 
+              className="input-field" 
+              value={newProject.endDate}
+              onChange={(e) => setNewProject(prev => ({ ...prev, endDate: e.target.value }))}
+            />
+          </div>
+        </div>
+
         <input 
           type="text" 
           placeholder="Công nghệ sử dụng (ngăn cách bằng dấu phẩy, vd: React, Node.js)" 
@@ -203,34 +230,45 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
         {projects.length === 0 ? (
           <div style={{ fontSize: '0.85rem', color: '#64748B', fontStyle: 'italic' }}>Chưa có dự án nào được thêm.</div>
         ) : (
-          projects.map((proj, idx) => (
-            <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '10px 12px' }}>
-              <div>
-                <div style={{ fontWeight: 600, color: '#F8FAFC', fontSize: '0.9rem' }}>
-                  {proj.name} <span style={{ color: '#22C55E', fontWeight: 500, fontSize: '0.8rem' }}>({proj.role})</span>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '2px', lineHeight: '1.4' }}>{proj.description}</div>
-                {proj.technologies && proj.technologies.length > 0 && (
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
-                    {proj.technologies.map((tech, tIdx) => (
-                      <span key={tIdx} style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(51, 65, 85, 0.6)', color: '#CBD5E1', borderRadius: '4px' }}>
-                        {tech}
+          projects.map((proj, idx) => {
+            const periodStr = formatProjectPeriod(proj.startDate, proj.endDate);
+            return (
+              <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--color-border)', borderRadius: '6px', padding: '10px 12px' }}>
+                <div style={{ width: '100%' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <div style={{ fontWeight: 600, color: '#F8FAFC', fontSize: '0.9rem' }}>
+                      {proj.name} <span style={{ color: '#22C55E', fontWeight: 500, fontSize: '0.8rem' }}>({proj.role})</span>
+                    </div>
+                    {periodStr && (
+                      <span style={{ fontSize: '0.75rem', color: '#38BDF8', fontWeight: 600 }}>
+                        {periodStr}
                       </span>
-                    ))}
+                    )}
                   </div>
-                )}
+                  <div style={{ fontSize: '0.8rem', color: '#94A3B8', marginTop: '2px', lineHeight: '1.4' }}>{proj.description}</div>
+                  {proj.technologies && proj.technologies.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '6px' }}>
+                      {proj.technologies.map((tech, tIdx) => (
+                        <span key={tIdx} style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'rgba(51, 65, 85, 0.6)', color: '#CBD5E1', borderRadius: '4px' }}>
+                          {tech}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                <button 
+                  onClick={() => onRemoveProject(idx)}
+                  style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px', marginLeft: '8px' }}
+                  title="Xóa dự án"
+                >
+                  <Trash size={16} />
+                </button>
               </div>
-              <button 
-                onClick={() => onRemoveProject(idx)}
-                style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px', marginLeft: '8px' }}
-                title="Xóa dự án"
-              >
-                <Trash size={16} />
-              </button>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
     </div>
   );
 };
+

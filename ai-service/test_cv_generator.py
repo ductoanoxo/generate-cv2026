@@ -37,10 +37,12 @@ def test_grounding_removes_llm_invented_data():
     grounded = cv_generator_service._ground_cv_in_profile(llm_cv, profile)
     assert grounded["personal_info"]["full_name"] == "Nguyễn A"
     assert grounded["personal_info"]["email"] == "a@example.com"
+    assert grounded["personal_info"]["summary"] == "Tóm tắt giả"
     assert grounded["skills"]["tools"] == []
     assert grounded["skills"]["technical"] == ["Linux", "Docker"]
     assert grounded["languages"] == ["Tiếng Anh"]
     assert grounded["projects"][0]["technologies"] == ["Docker"]
+
 
 async def test_cv_generator():
     student_info = {
