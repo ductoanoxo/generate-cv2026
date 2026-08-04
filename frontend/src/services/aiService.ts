@@ -5,9 +5,10 @@ const AI_BASE = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
 
 const aiClient = axios.create({
   baseURL: AI_BASE,
-  timeout: 30000,
+  timeout: 90000,
   headers: { 'Content-Type': 'application/json' }
 });
+
 
 // --- Search Types ---
 export interface SearchRequest {

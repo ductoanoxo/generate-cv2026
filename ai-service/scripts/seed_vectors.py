@@ -30,19 +30,27 @@ def seed_qdrant(qdrant_url: str = None):
     supabase_subjects = fetch_supabase_cntt_subjects()
     logger.info(f"Retrieved {len(supabase_subjects)} core IT subjects from Supabase database for vector seeding.")
 
-    # 2. Create or recreate collection
+    # 2. Check collection — only seed if empty or missing
     collections = client.get_collections().collections
     collection_names = [c.name for c in collections]
 
     if COLLECTION_NAME in collection_names:
-        logger.info(f"Collection '{COLLECTION_NAME}' exists. Re-creating for fresh seed...")
-        client.delete_collection(collection_name=COLLECTION_NAME)
+        existing_info = client.get_collection(collection_name=COLLECTION_NAME)
+        if existing_info.points_count and existing_info.points_count > 0:
+            logger.info(
+                f"Collection '{COLLECTION_NAME}' already has {existing_info.points_count} points. "
+                f"Skipping seed to preserve existing data. "
+                f"Delete collection manually via Qdrant dashboard to force re-seed."
+            )
+            return
+        logger.info(f"Collection '{COLLECTION_NAME}' exists but is empty. Seeding...")
+    else:
+        client.create_collection(
+            collection_name=COLLECTION_NAME,
+            vectors_config=VectorParams(size=embedding_service.dimension, distance=Distance.COSINE)
+        )
+        logger.info(f"Collection '{COLLECTION_NAME}' created with 1536-dim Cosine distance.")
 
-    client.create_collection(
-        collection_name=COLLECTION_NAME,
-        vectors_config=VectorParams(size=embedding_service.dimension, distance=Distance.COSINE)
-    )
-    logger.info(f"Collection '{COLLECTION_NAME}' created successfully with 1536-dim Cosine distance configuration.")
 
     # Prepare all item texts and payloads for batch embedding
     items_to_embed: List[Dict[str, Any]] = []
