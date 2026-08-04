@@ -18,10 +18,15 @@ REQUIRED_CV_KEYS = {"personal_info", "education", "skills", "projects"}
 MAX_LLM_RETRIES = 2
 
 
+class LLMGenerationError(Exception):
+    """Exception raised when LLM generation fails and fallback is required."""
+    pass
+
+
 class CVGeneratorService:
     """
     CV Generator Service — Ngày 7
-    Sử dụng LLM (Gemini / OpenAI) để sinh CV JSON từ Competency Profile.
+    Sử dụng LLM (Gemini / OpenAI / OpenRouter) để sinh CV JSON từ Competency Profile.
     Khi LLM không khả dụng → fallback sang deterministic engine.
     """
 
@@ -43,11 +48,13 @@ class CVGeneratorService:
     def _ground_cv_in_profile(self, llm_cv: Dict[str, Any], profile: Dict[str, Any]) -> Dict[str, Any]:
         """Apply a deterministic evidence boundary after LLM generation.
 
-        The model may invent contact details, tools, courses, languages, or project
-        technologies.  Rebuilding the data-bearing sections from the competency
-        profile guarantees that only user/evidence-backed values reach the UI.
+        Rebuilding the data-bearing sections from the competency profile guarantees
+        that only user/evidence-backed values reach the UI.
+        Strictly preserves LLM generated summary if present.
         """
         grounded = self.generate_fallback_cv(profile)
+
+        # Retain LLM summary if valid
         if isinstance(llm_cv, dict) and llm_cv.get("personal_info", {}).get("summary"):
             grounded["personal_info"]["summary"] = llm_cv["personal_info"]["summary"]
 
@@ -125,7 +132,7 @@ class CVGeneratorService:
                 "highlights": highlights,
             })
 
-        # Build categorized skills from competency profile (smart categorization)
+        # Build categorized skills from competency profile
         profile_categorized = competency_summary.get("categorized_skills", [])
         if not profile_categorized:
             profile_categorized = [
@@ -137,13 +144,26 @@ class CVGeneratorService:
                     "items": competency_summary["soft_skills"],
                 })
 
+        # Build 4-sentence professional summary following system prompt guidelines
+        top_skills = tech_skills[:4] if tech_skills else ["lập trình phần mềm", "cơ sở dữ liệu", "thiết kế hệ thống"]
+        top_skills_str = ", ".join(top_skills)
+        major_str = student.get("major") or "Công nghệ thông tin"
+        spec_str = student.get("specialization") or student.get("faculty") or "Kỹ thuật phần mềm"
+
+        generated_summary = (
+            f"Là sinh viên ngành {major_str} ({spec_str}) tại Trường Cao đẳng Tây Đô, tôi sở hữu nền tảng kiến thức vững chắc về {top_skills_str} và định hướng phát triển sự nghiệp trở thành {job_title}. "
+            f"Tôi có kinh nghiệm làm việc thực tế thông qua việc thiết kế, xây dựng và triển khai các dự án phần mềm đáp ứng đầy đủ quy trình kỹ thuật end-to-end. "
+            f"Tôi là người có tinh thần chủ động tự học, tư duy giải quyết vấn đề linh hoạt và khả năng thích ứng nhanh chóng với các công nghệ mới. "
+            f"Tôi luôn sẵn sàng đón nhận thử thách, cam kết mang lại các sản phẩm chất lượng cao và không ngừng hoàn thiện năng lực chuyên môn."
+        )
+
         cv_json = {
             "personal_info": {
                 "full_name": student_name,
                 "title": job_title,
                 "email": student.get("email") or "",
                 "phone": student.get("phone") or student.get("phoneNumber") or "",
-                "summary": f"Sinh viên ngành {student.get('major', 'CNTT')} - {student.get('specialization', 'Kỹ thuật phần mềm')}, định hướng phát triển {job_title}.",
+                "summary": generated_summary,
             },
             "education": {
                 "institution": "Trường Cao Đẳng Tây Đô",
@@ -164,7 +184,6 @@ class CVGeneratorService:
         }
         return cv_json
 
-
     # ── LLM API Callers ────────────────────────────────────────
     async def _call_openai_llm(self, prompt: str) -> Optional[str]:
         """Call OpenAI directly or through OpenRouter when an sk-or key is configured."""
@@ -177,17 +196,23 @@ class CVGeneratorService:
             "Authorization": f"Bearer {settings.OPENAI_API_KEY}",
             "Content-Type": "application/json",
         }
+        model_name = settings.LLM_MODEL
+        if is_openrouter and not ("/" in model_name):
+            model_name = f"openai/{model_name}"
+
         payload = {
-            "model": f"openai/{settings.LLM_MODEL}" if is_openrouter else settings.LLM_MODEL,
+            "model": model_name,
             "messages": [
                 {"role": "system", "content": CV_SYSTEM_PROMPT},
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.3,
+            "max_tokens": 1500,
             "response_format": {"type": "json_object"},
         }
 
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+
             resp = await client.post(url, headers=headers, json=payload)
             if resp.status_code == 200:
                 data = resp.json()

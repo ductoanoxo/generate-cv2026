@@ -16,7 +16,8 @@ class Settings(BaseSettings):
     GITHUB_TOKEN: str | None = None
     DATABASE_URL: str | None = None
     
-    LLM_MODEL: str = "gpt-4o-mini"
+    LLM_MODEL: str = "google/gemma-4-26b-a4b-it:free"
+
     OLLAMA_BASE_URL: str = "http://localhost:11434"
 
     model_config = SettingsConfigDict(

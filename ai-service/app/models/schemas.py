@@ -27,6 +27,9 @@ class ProjectSchema(BaseModel):
     role: str = ""
     description: str = ""
     technologies: List[str] = []
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+
 
 
 class CertificationSchema(BaseModel):
@@ -63,16 +66,26 @@ class ProfileSchema(BaseModel):
     avatar: Optional[str] = None
 
 
+class EducationSchema(BaseModel):
+    school: str = ""
+    major: str = ""
+    period: str = ""
+    gpa: Optional[Any] = None
+    degree: Optional[str] = None
+
+
 class CVDataSchema(BaseModel):
     profile: ProfileSchema = Field(default_factory=ProfileSchema)
     summary: str = ""
     skills: List[str] = []
     languages: List[str] = []
     projects: List[ProjectSchema] = []
+    education: List[EducationSchema] = []
     certifications: List[CertificationSchema] = []
     experience: List[ExperienceSchema] = []
     grades: List[GradeSchema] = []
     activities: List[str] = []
+
 
 
 class Mau07RequestSchema(BaseModel):

@@ -5,78 +5,75 @@
 <style>
   @page {
     size: A4;
-    margin: 0;
+    margin-top: 10mm;
+    margin-bottom: 12mm;
+    margin-left: 10mm;
+    margin-right: 10mm;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
   body {
     font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
     font-size: 10pt;
     line-height: 1.5;
     color: #1e293b;
-  }
-  .page {
-    display: flex;
-    min-height: 297mm;
-    width: 210mm;
-  }
-  .sidebar {
-    width: 35%;
-    background: #0f172a;
-    color: #e2e8f0;
-    padding: 24px 20px;
-  }
-  .main {
-    width: 65%;
-    padding: 24px 28px;
     background: #ffffff;
   }
-  .sidebar h2 {
-    font-size: 11pt;
-    font-weight: 700;
-    color: #94a3b8;
-    text-transform: uppercase;
-    letter-spacing: 1.5px;
-    margin-bottom: 10px;
-    border-bottom: 1px solid #334155;
-    padding-bottom: 4px;
+  h1, h2, h3, .section-title, .main h2 {
+    page-break-after: avoid !important;
+    break-after: avoid !important;
   }
-  .sidebar .section {
-    margin-bottom: 18px;
+  .section-block, .section, .table-container {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
   }
-  .avatar {
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
-    object-fit: cover;
+  .project-item, .exp-item {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  .page {
     display: block;
-    margin: 0 auto 14px;
-    border: 3px solid #38bdf8;
+    width: 100%;
+    height: auto;
   }
-  .name {
+  .header-card {
+    background: #0f172a;
+    color: #e2e8f0;
+    padding: 18px 20px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .header-card .name {
     font-size: 16pt;
     font-weight: 800;
     color: #ffffff;
-    text-align: center;
     margin-bottom: 2px;
   }
-  .title {
+  .header-card .title {
     font-size: 10pt;
     color: #38bdf8;
-    text-align: center;
-    margin-bottom: 18px;
+    font-weight: 600;
+    margin-bottom: 10px;
   }
-  .contact-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
+  .contact-bar {
     font-size: 9pt;
-    margin-bottom: 5px;
-    word-break: break-all;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    line-height: 1.4;
   }
-  .contact-item .icon {
-    width: 16px;
-    text-align: center;
-    flex-shrink: 0;
+  .contact-bar span {
+    margin-right: 12px;
+  }
+  .skills-bar {
+    margin-top: 6px;
   }
   .skill-tag {
     display: inline-block;
@@ -86,6 +83,17 @@
     padding: 3px 8px;
     border-radius: 4px;
     margin: 2px 3px 2px 0;
+    border: 1px solid #334155;
+  }
+  .main {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .section {
+    margin-bottom: 14px;
+    page-break-inside: auto;
+    break-inside: auto;
   }
   .main h2 {
     font-size: 11pt;
@@ -97,6 +105,8 @@
     padding-bottom: 3px;
     margin-bottom: 8px;
     margin-top: 14px;
+    page-break-after: avoid;
+    break-after: avoid;
   }
   .main h2:first-of-type {
     margin-top: 0;
@@ -109,7 +119,10 @@
   }
   .project-item, .exp-item {
     margin-bottom: 8px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
+
   .project-name {
     font-weight: 700;
     font-size: 10pt;
@@ -157,6 +170,8 @@
     font-size: 9pt;
     color: #475569;
     margin-bottom: 3px;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .cert-name {
     font-weight: 600;
@@ -166,6 +181,20 @@
     border-collapse: collapse;
     font-size: 9pt;
     margin-top: 4px;
+    page-break-inside: auto;
+    break-inside: auto;
+  }
+  .grade-table tr {
+    page-break-inside: avoid;
+    break-inside: avoid;
+    page-break-after: auto;
+    break-after: auto;
+  }
+  .grade-table thead {
+    display: table-header-group;
+  }
+  .grade-table tfoot {
+    display: table-footer-group;
   }
   .grade-table th {
     background: #f1f5f9;
@@ -192,6 +221,8 @@
     margin-bottom: 3px;
     padding-left: 12px;
     position: relative;
+    page-break-inside: avoid;
+    break-inside: avoid;
   }
   .activity-item::before {
     content: "▸";
@@ -201,110 +232,115 @@
   }
   .language-item {
     font-size: 9pt;
-    color: #e2e8f0;
+    color: #475569;
     margin-bottom: 4px;
   }
 </style>
 </head>
 <body>
 <div class="page">
-  <div class="sidebar">
-    <div class="section">
-      {% if profile.avatar %}
-      <img class="avatar" src="{{ profile.avatar }}" alt="avatar">
-      {% endif %}
-      <div class="name">{{ profile.fullName }}</div>
-      <div class="title">{{ profile.major }}</div>
+  <div class="header-card">
+    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+      <span class="name">{{ profile.fullName }}</span>
+      {% if profile.phoneNumber %}<span style="font-size:9pt; color:#cbd5e1;">{{ profile.phoneNumber }}</span>{% endif %}
     </div>
-
-    <div class="section">
-      <h2>Liên hệ</h2>
-      <div class="contact-item"><span class="icon">📧</span> {{ profile.email }}</div>
-      <div class="contact-item"><span class="icon">📞</span> {{ profile.phoneNumber }}</div>
-      {% if profile.birthDate %}
-      <div class="contact-item"><span class="icon">🎂</span> {{ profile.birthDate }}</div>
-      {% endif %}
-      {% if profile.gender %}
-      <div class="contact-item"><span class="icon">👤</span> {{ profile.gender }}</div>
-      {% endif %}
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:9pt; color:#38bdf8; font-weight:600;">{% if profile.studentCode %}Mã SV: {{ profile.studentCode }}{% endif %}</span>
+      {% if profile.email %}<span style="font-size:9pt; color:#e2e8f0;">{{ profile.email }}</span>{% endif %}
     </div>
-
-    {% if skills %}
-    <div class="section">
-      <h2>Kỹ năng</h2>
-      {% for skill in skills %}
-      <span class="skill-tag">{{ skill }}</span>
-      {% endfor %}
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:9pt; color:#cbd5e1;">Ngành: {{ profile.major }}{% if profile.faculty %} • Khoa: {{ profile.faculty }}{% endif %}</span>
     </div>
-    {% endif %}
-
-    {% if languages %}
-    <div class="section">
-      <h2>Ngôn ngữ</h2>
-      {% for lang in languages %}
-      <div class="language-item">{{ lang }}</div>
-      {% endfor %}
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:9pt; font-weight:700; color:#ffffff;">Trường Cao đẳng Tây Đô</span>
     </div>
-    {% endif %}
   </div>
 
   <div class="main">
-    {% if summary %}
-    <h2>Giới thiệu</h2>
-    <p class="summary">{{ summary }}</p>
-    {% endif %}
-
-    {% if profile.faculty or profile.major or profile.academicYear %}
-    <h2>Học vấn</h2>
-    <div style="font-size:9.5pt;color:#475569;margin-bottom:4px;">
-      <div><strong>Khoa:</strong> {{ profile.faculty }}</div>
-      <div><strong>Ngành:</strong> {{ profile.major }}</div>
-      <div><strong>Khóa:</strong> {{ profile.academicYear }}</div>
-      {% if profile.gpa %}
-      <div><strong>GPA:</strong> {{ "%.2f"|format(profile.gpa) }}</div>
+    <div class="section">
+      <h2>Học vấn / Education</h2>
+      {% if education and education|length > 0 %}
+        {% for edu in education %}
+        <div class="exp-item">
+          <div class="exp-header">
+            <span class="exp-company">• {{ edu.school }}</span>
+            {% if edu.period %}<span class="exp-period">{{ edu.period }}</span>{% endif %}
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 9pt; color: #475569; margin-top: 2px;">
+            <span>Chuyên ngành: {{ edu.major }}{% if edu.degree %} [{{ edu.degree }}]{% endif %}</span>
+            {% if edu.gpa %}
+            <span><strong>GPA:</strong> {{ edu.gpa }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="exp-item">
+          <div class="exp-header">
+            <span class="exp-company">• Trường Cao đẳng Tây Đô</span>
+            {% if profile.academicYear %}<span class="exp-period">{{ profile.academicYear }}</span>{% endif %}
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 9pt; color: #475569; margin-top: 2px;">
+            <span>Chuyên ngành: {{ profile.major }}{% if profile.faculty %} ({{ profile.faculty }}){% endif %}</span>
+            {% if profile.gpa and profile.gpa > 0 %}
+            <span><strong>GPA:</strong> {{ "%.2f"|format(profile.gpa) }} / 4.0</span>
+            {% endif %}
+          </div>
+        </div>
       {% endif %}
+    </div>
+
+
+    {% if summary %}
+    <div class="section">
+      <h2>Giới thiệu</h2>
+      <p class="summary">{{ summary }}</p>
     </div>
     {% endif %}
 
-    {% if grades %}
-    <h2>Kết quả học tập</h2>
-    <table class="grade-table">
-      <thead>
-        <tr>
-          <th>Môn học</th>
-          <th style="width:60px">Điểm</th>
-          <th style="width:50px">TC</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for g in grades %}
-        <tr>
-          <td>{{ g.subjectName }}</td>
-          <td>{{ "%.1f"|format(g.score) }}</td>
-          <td>{{ g.credits }}</td>
-        </tr>
+    {% if skills %}
+    <div class="section">
+      <h2>Kỹ năng & Công nghệ</h2>
+      <div style="margin-top: 4px;">
+        {% for skill in skills %}
+        <span class="skill-tag" style="background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;">{{ skill }}</span>
         {% endfor %}
-      </tbody>
-    </table>
+      </div>
+    </div>
     {% endif %}
 
     {% if projects %}
-    <h2>Dự án</h2>
-    {% for p in projects %}
-    <div class="project-item">
-      <div class="project-name">{{ p.name }}</div>
-      <div class="project-role">{{ p.role }}</div>
-      <div class="project-desc">{{ p.description }}</div>
-      {% if p.technologies %}
-      <div class="project-tech">
-        {% for tech in p.technologies %}
-        <span class="skill-tag" style="background:#f1f5f9;color:#475569;">{{ tech }}</span>
-        {% endfor %}
+    <div class="section">
+      <h2>Dự án / Projects</h2>
+      {% for p in projects %}
+      <div class="project-item">
+        <div style="display: flex; justify-content: space-between; align-items: baseline;">
+          <span class="project-name">• {{ p.name }}</span>
+          {% if p.startDate %}
+          <span style="font-size: 8.5pt; color: #64748b; font-weight: 600;">
+            {{ p.startDate[5:7] }}/{{ p.startDate[0:4] }} - {% if p.endDate %}{{ p.endDate[5:7] }}/{{ p.endDate[0:4] }}{% else %}now{% endif %}
+          </span>
+          {% endif %}
+        </div>
+        {% if p.technologies %}
+        <div class="project-tech">
+          <strong>Công nghệ & Công cụ:</strong>
+          {% for tech in p.technologies %}
+          <span class="skill-tag" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">{{ tech }}</span>
+          {% endfor %}
+        </div>
+        {% endif %}
+        {% if p.role %}
+        <div class="project-role">Vai trò: {{ p.role }}</div>
+        {% endif %}
+        {% if p.description %}
+        <div class="project-desc">• {{ p.description }}</div>
+        {% endif %}
       </div>
-      {% endif %}
+      {% endfor %}
     </div>
-    {% endfor %}
     {% endif %}
+
 
     {% if experience %}
     <h2>Kinh nghiệm</h2>

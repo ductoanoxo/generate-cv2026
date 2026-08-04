@@ -1,23 +1,42 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { defaultCVData, type CVData, type Experience, type Certification } from '../../mock/mockData';
-import { JDInputForm } from '../../components/JDInputForm';
-import { CVPreview, getFormattedSkillGroups } from '../../components/CVPreview';
-import { ATSScoreBadge } from '../../components/ATSScoreBadge';
-import { ValidationReport } from '../../components/ValidationReport';
-import { buildATSReport } from '../../utils/cvValidation';
-import { exportCVPdf, exportMau07Docx, generateCVFullPipeline, parseJobDescription } from '../../services/aiService';
-import { getMyVerifications, submitVerification, type InternshipVerification } from '../../services/internshipVerificationService';
-import { MatchedCoursesTable, type MatchedCourse } from '../../components/MatchedCoursesTable';
-import { ProjectForm, type Project } from '../../components/ProjectForm';
-import { InternshipForm } from '../../components/InternshipForm';
-import { CertForm } from '../../components/CertForm';
-import { SkillRadarChart } from '../../components/SkillRadarChart';
-import { useAuth } from '../../context/AuthContext';
-import axios from 'axios';
-import { 
-  FileText, 
-  FloppyDisk, 
-  Plus, 
+import React, { useState, useEffect, useMemo, useRef } from "react";
+import {
+  defaultCVData,
+  type CVData,
+  type Experience,
+  type Certification,
+} from "../../mock/mockData";
+import { JDInputForm } from "../../components/JDInputForm";
+import { CVPreview, getFormattedSkillGroups } from "../../components/CVPreview";
+import { ATSScoreBadge } from "../../components/ATSScoreBadge";
+import { ValidationReport } from "../../components/ValidationReport";
+import { buildATSReport } from "../../utils/cvValidation";
+import {
+  exportCVPdf,
+  exportMau07Docx,
+  generateCVFullPipeline,
+  parseJobDescription,
+} from "../../services/aiService";
+import {
+  getMyVerifications,
+  submitVerification,
+  type InternshipVerification,
+} from "../../services/internshipVerificationService";
+import {
+  MatchedCoursesTable,
+  type MatchedCourse,
+} from "../../components/MatchedCoursesTable";
+import { ProjectForm, type Project } from "../../components/ProjectForm";
+import { EducationForm, type EducationItem } from "../../components/EducationForm";
+import { InternshipForm } from "../../components/InternshipForm";
+
+import { CertForm } from "../../components/CertForm";
+import { SkillRadarChart } from "../../components/SkillRadarChart";
+import { useAuth } from "../../context/AuthContext";
+import axios from "axios";
+import {
+  FileText,
+  FloppyDisk,
+  Plus,
   Trash,
   Check,
   User,
@@ -26,10 +45,17 @@ import {
   Target,
   ArrowRight,
   DownloadSimple,
-  Spinner
-} from '@phosphor-icons/react';
+  Spinner,
+  MagnifyingGlassPlus,
+  MagnifyingGlassMinus,
+  CornersOut,
+} from "@phosphor-icons/react";
 
-interface SavedCVSummary { id: string; title: string; updatedAt: string; }
+interface SavedCVSummary {
+  id: string;
+  title: string;
+  updatedAt: string;
+}
 
 interface StudentProfileResponse {
   fullName: string;
@@ -47,69 +73,231 @@ interface StudentProfileResponse {
 // These are explicit technology names, not fabricated student data.
 const extractJDTechnologySkills = (text: string): string[] => {
   const known = [
-    'Linux', 'Python', 'Docker', 'Kubernetes', 'CI/CD', 'Git', 'GitHub', 'Terraform', 'AWS', 'Azure', 'GCP', 
-    'PostgreSQL', 'Oracle', 'MySQL', 'MongoDB', 'JavaScript', 'TypeScript', 'React', 'FastAPI', 'Java', 'Spring Boot', 
-    'Jmix', 'Vaadin', 'C++', 'C#', 'Prometheus', 'Grafana', 'Draw.io', 'Figma', 'Core Banking', 'Thought Machine', 
-    'Foreign Exchange', 'FX Platform', 'Financial Accounting', 'Custody Banking', 'Anti-Money Laundering', 'AML', 
-    'Compliance', 'Customer Relationship Management', 'LARK', 'Enterprise Resource Planning', 'ODOO', 'Agile Scrum', 
-    'Technical Troubleshooting', 'Cross-functional Collaboration', 'unit testing', 'infrastructure as code'
+    "Linux",
+    "Python",
+    "Docker",
+    "Kubernetes",
+    "CI/CD",
+    "Git",
+    "GitHub",
+    "Terraform",
+    "AWS",
+    "Azure",
+    "GCP",
+    "PostgreSQL",
+    "Oracle",
+    "MySQL",
+    "MongoDB",
+    "JavaScript",
+    "TypeScript",
+    "React",
+    "FastAPI",
+    "Java",
+    "Spring Boot",
+    "Jmix",
+    "Vaadin",
+    "C++",
+    "C#",
+    "Prometheus",
+    "Grafana",
+    "Draw.io",
+    "Figma",
+    "Core Banking",
+    "Thought Machine",
+    "Foreign Exchange",
+    "FX Platform",
+    "Financial Accounting",
+    "Custody Banking",
+    "Anti-Money Laundering",
+    "AML",
+    "Compliance",
+    "Customer Relationship Management",
+    "LARK",
+    "Enterprise Resource Planning",
+    "ODOO",
+    "Agile Scrum",
+    "Technical Troubleshooting",
+    "Cross-functional Collaboration",
+    "unit testing",
+    "infrastructure as code",
   ];
   const lower = text.toLowerCase();
-  return known.filter(skill => lower.includes(skill.toLowerCase()));
+  return known.filter((skill) => lower.includes(skill.toLowerCase()));
 };
-
 
 const extractJobTitleFromJD = (jdText: string): string => {
   const IGNORED_HEADINGS = [
-    'mô tả công việc', 'job description', 'thông tin tuyển dụng', 'vị trí tuyển dụng', 
-    'tuyển dụng', 'vị trí', 'jd', 'yêu cầu công việc', 'yêu cầu ứng viên', 'mô tả', 'quyền lợi'
+    "mô tả công việc",
+    "job description",
+    "thông tin tuyển dụng",
+    "vị trí tuyển dụng",
+    "tuyển dụng",
+    "vị trí",
+    "jd",
+    "yêu cầu công việc",
+    "yêu cầu ứng viên",
+    "mô tả",
+    "quyền lợi",
   ];
-  const lines = jdText.split(/\n|[.!?]/).map(l => l.trim()).filter(Boolean);
+  const lines = jdText
+    .split(/\n|[.!?]/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   for (const line of lines) {
-    const lower = line.toLowerCase().replace(/[:\-\*#]/g, '').trim();
-    if (!IGNORED_HEADINGS.includes(lower) && line.length >= 3 && line.length <= 80) {
-      return line.replace(/^[:\-\*#\d\.\s]+/, '').trim();
+    const lower = line
+      .toLowerCase()
+      .replace(/[:\-\*#]/g, "")
+      .trim();
+    if (
+      !IGNORED_HEADINGS.includes(lower) &&
+      line.length >= 3 &&
+      line.length <= 80
+    ) {
+      return line.replace(/^[:\-\*#\d\.\s]+/, "").trim();
     }
   }
-  return 'Kỹ sư CNTT';
+  return "Kỹ sư CNTT";
 };
 
 export const CVBuilder: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'jd-match' | 'cv-editor'>('jd-match');
+  const [activeTab, setActiveTab] = useState<"jd-match" | "cv-editor">(
+    "jd-match",
+  );
   const [cvData, setCvData] = useState<CVData>(defaultCVData);
-  const [newLanguage, setNewLanguage] = useState<string>('');
-  const [newActivity, setNewActivity] = useState<string>('');
-  const [selectedGrades, setSelectedGrades] = useState<string[]>(cvData.grades.map(g => g.subjectName));
+  const [newLanguage, setNewLanguage] = useState<string>("");
+  const [newActivity, setNewActivity] = useState<string>("");
+  const [selectedGrades, setSelectedGrades] = useState<string[]>(
+    cvData.grades.map((g) => g.subjectName),
+  );
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [savedCVId, setSavedCVId] = useState<string | null>(null);
   const [savedCVs, setSavedCVs] = useState<SavedCVSummary[]>([]);
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
-  const [verifications, setVerifications] = useState<InternshipVerification[]>([]);
+  const [verifications, setVerifications] = useState<InternshipVerification[]>(
+    [],
+  );
+  const [zoomLevel, setZoomLevel] = useState<number>(0.75);
+  const zoomLevelRef = useRef<number>(zoomLevel);
+  const viewerContainerRef = useRef<HTMLDivElement>(null);
+  const previewWrapperRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    zoomLevelRef.current = zoomLevel;
+  }, [zoomLevel]);
+
+  const handleZoomIn = () =>
+    setZoomLevel((prev) => Math.min(2.5, parseFloat((prev + 0.1).toFixed(2))));
+  const handleZoomOut = () =>
+    setZoomLevel((prev) => Math.max(0.5, parseFloat((prev - 0.1).toFixed(2))));
+  const handleZoomReset = () => setZoomLevel(0.75);
+
+  useEffect(() => {
+    const container = viewerContainerRef.current;
+    if (!container) return;
+
+    let gestureScaleStart = 0.75;
+
+    const handleWheel = (e: WheelEvent) => {
+      // Ensure the event target is inside the CV viewer container
+      if (!container.contains(e.target as Node)) return;
+
+      // Pinch-to-zoom on touchpad / trackpad or Ctrl + Mouse Wheel
+      if (e.ctrlKey) {
+        e.preventDefault();
+
+        const delta = -e.deltaY;
+        // Determine sensitivity: trackpad pinch yields very small delta values (often absolute value < 15)
+        // compared to standard mouse wheel ticks (typically 100+).
+        const isTrackpad = Math.abs(e.deltaY) < 15;
+        const sensitivity = isTrackpad ? 0.015 : 0.003;
+        // Using Math.exp ensures the factor is ALWAYS positive, preventing layout collapse or negative scale
+        const factor = Math.exp(delta * sensitivity);
+
+        setZoomLevel((prev) => {
+          const currentScale = prev || 0.75;
+          const nextScale = Math.min(2.5, Math.max(0.5, currentScale * factor));
+          if (nextScale === currentScale) return currentScale;
+
+          // Target scale center coordinates relative to the container
+          const rect = container.getBoundingClientRect();
+          const mouseX = e.clientX - rect.left;
+          const mouseY = e.clientY - rect.top;
+
+          const scrollLeft = container.scrollLeft;
+          const scrollTop = container.scrollTop;
+
+          // Keep point under cursor stationary
+          const contentX = (scrollLeft + mouseX) / currentScale;
+          const contentY = (scrollTop + mouseY) / currentScale;
+
+          if (isFinite(contentX) && isFinite(contentY)) {
+            requestAnimationFrame(() => {
+              container.scrollLeft = contentX * nextScale - mouseX;
+              container.scrollTop = contentY * nextScale - mouseY;
+            });
+          }
+
+          return parseFloat(nextScale.toFixed(3));
+        });
+      }
+    };
+
+    // Safari/macOS Trackpad gestures support
+    const handleGestureStart = (e: any) => {
+      if (!container.contains(e.target as Node)) return;
+      e.preventDefault();
+      gestureScaleStart = zoomLevelRef.current;
+    };
+
+    const handleGestureChange = (e: any) => {
+      if (!container.contains(e.target as Node)) return;
+      e.preventDefault();
+      setZoomLevel(() => {
+        const nextScale = Math.min(2.5, Math.max(0.5, gestureScaleStart * e.scale));
+        return parseFloat(nextScale.toFixed(3));
+      });
+    };
+
+    // Bind to document with capture: true to guarantee handling before default browser action and bubbling cancellation
+    document.addEventListener("wheel", handleWheel, { passive: false, capture: true });
+    document.addEventListener("gesturestart", handleGestureStart, { passive: false, capture: true });
+    document.addEventListener("gesturechange", handleGestureChange, { passive: false, capture: true });
+
+    return () => {
+      document.removeEventListener("wheel", handleWheel, { capture: true });
+      document.removeEventListener("gesturestart", handleGestureStart, { capture: true });
+      document.removeEventListener("gesturechange", handleGestureChange, { capture: true });
+    };
+  }, []);
 
   // JD Matching states inside CV Builder
-  const [jdText, setJdText] = useState<string>('');
+  const [jdText, setJdText] = useState<string>("");
   const [matchedCourses, setMatchedCourses] = useState<MatchedCourse[]>([]);
   const [isMatchingLoading, setIsMatchingLoading] = useState<boolean>(false);
   const [rawDbSubjects, setRawDbSubjects] = useState<any[]>([]);
-  const [apiMessage, setApiMessage] = useState<string>('');
-  const [shouldRegenerateAfterProject, setShouldRegenerateAfterProject] = useState(false);
-  const atsReport = useMemo(() => buildATSReport(cvData, jdText), [cvData, jdText]);
+  const [apiMessage, setApiMessage] = useState<string>("");
+  const [shouldRegenerateAfterProject, setShouldRegenerateAfterProject] =
+    useState(false);
+  const atsReport = useMemo(
+    () => buildATSReport(cvData, jdText),
+    [cvData, jdText],
+  );
 
   // Only internship items that have been approved (verificationStatus === 1) are shown on the CV
   const cvExperience = useMemo(
-    () => (cvData.experience || []).filter(exp => exp.verificationStatus === 1),
-    [cvData.experience]
+    () =>
+      (cvData.experience || []).filter((exp) => exp.verificationStatus === 1),
+    [cvData.experience],
   );
-
 
   // Fetch real student scores from .NET API or Supabase DB
   useEffect(() => {
     const fetchScores = async () => {
-      const studentId = user?.id || 'u6';
+      const studentId = user?.id || "u6";
       try {
         const response = await axios.get(
-          `http://localhost:5000/api/student/scores?studentId=${studentId}`
+          `http://localhost:5000/api/student/scores?studentId=${studentId}`,
         );
         if (response.data && Array.isArray(response.data)) {
           const list: any[] = [];
@@ -123,14 +311,17 @@ export const CVBuilder: React.FC = () => {
           if (list.length > 0) {
             // Deduplicate by subjectCode / subjectName, keeping the highest score
             const uniqueMap = new Map<string, any>();
-            list.forEach(sub => {
-              const key = (sub.subjectCode || sub.subjectName || '').trim().toLowerCase();
+            list.forEach((sub) => {
+              const key = (sub.subjectCode || sub.subjectName || "")
+                .trim()
+                .toLowerCase();
               if (!key) return;
               if (!uniqueMap.has(key)) {
                 uniqueMap.set(key, sub);
               } else {
                 const existing = uniqueMap.get(key);
-                const existingScore = existing.combinedResult ?? existing.result ?? 0;
+                const existingScore =
+                  existing.combinedResult ?? existing.result ?? 0;
                 const newScore = sub.combinedResult ?? sub.result ?? 0;
                 if (newScore > existingScore) {
                   uniqueMap.set(key, sub);
@@ -142,10 +333,12 @@ export const CVBuilder: React.FC = () => {
           }
         }
       } catch (err) {
-        console.warn('API score query failed, loading from Supabase...', err);
+        console.warn("API score query failed, loading from Supabase...", err);
       }
 
-      setApiMessage('Không tải được điểm thật từ hệ thống. Vui lòng thử lại sau.');
+      setApiMessage(
+        "Không tải được điểm thật từ hệ thống. Vui lòng thử lại sau.",
+      );
     };
 
     fetchScores();
@@ -153,21 +346,22 @@ export const CVBuilder: React.FC = () => {
 
   useEffect(() => {
     if (!user) return;
-    axios.get<SavedCVSummary[]>('http://localhost:5000/api/saved-cvs')
-      .then(response => setSavedCVs(response.data))
-      .catch(() => setApiMessage('Không tải được danh sách CV đã lưu.'));
+    axios
+      .get<SavedCVSummary[]>("http://localhost:5000/api/saved-cvs")
+      .then((response) => setSavedCVs(response.data))
+      .catch(() => setApiMessage("Không tải được danh sách CV đã lưu."));
   }, [user]);
 
   // Update profile from logged in user if available
   useEffect(() => {
     if (user) {
-      setCvData(prev => ({
+      setCvData((prev) => ({
         ...prev,
         profile: {
           ...prev.profile,
           fullName: user.fullName || prev.profile.fullName,
-          email: user.email || prev.profile.email
-        }
+          email: user.email || prev.profile.email,
+        },
       }));
     }
   }, [user]);
@@ -176,30 +370,37 @@ export const CVBuilder: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    axios.get<{ profile: StudentProfileResponse }>(
-      `http://localhost:5000/api/student/dashboard?studentId=${user.id}`
-    )
-      .then(res => {
+    axios
+      .get<{ profile: StudentProfileResponse }>(
+        `http://localhost:5000/api/student/dashboard?studentId=${user.id}`,
+      )
+      .then((res) => {
         const p = res.data?.profile;
         if (!p || !active) return;
-        setCvData(prev => ({
+        setCvData((prev) => ({
           ...prev,
           profile: {
             ...prev.profile,
             fullName: prev.profile.fullName || p.fullName,
             email: prev.profile.email || p.email,
-            phoneNumber: prev.profile.phoneNumber || p.phoneNumber || '',
-            gender: prev.profile.gender || p.gender || '',
-            birthDate: prev.profile.birthDate || (p.birthDate ? p.birthDate.slice(0, 10) : ''),
-            hometown: prev.profile.hometown || p.hometown || '',
+            phoneNumber: prev.profile.phoneNumber || p.phoneNumber || "",
+            gender: prev.profile.gender || p.gender || "",
+            birthDate:
+              prev.profile.birthDate ||
+              (p.birthDate ? p.birthDate.slice(0, 10) : ""),
+            hometown: prev.profile.hometown || p.hometown || "",
             studentCode: prev.profile.studentCode || p.studentCode,
             major: prev.profile.major || p.majorName,
-            academicYear: prev.profile.academicYear || p.academicYearName
-          }
+            academicYear: prev.profile.academicYear || p.academicYearName,
+          },
         }));
       })
-      .catch(() => { /* backend may be off */ });
-    return () => { active = false; };
+      .catch(() => {
+        /* backend may be off */
+      });
+    return () => {
+      active = false;
+    };
   }, [user]);
 
   // Load the student's internship verifications and merge status into experiences.
@@ -208,23 +409,35 @@ export const CVBuilder: React.FC = () => {
     let active = true;
     const load = () => {
       getMyVerifications()
-        .then(list => { if (active) setVerifications(list); })
-        .catch(() => { /* backend may be off */ });
+        .then((list) => {
+          if (active) setVerifications(list);
+        })
+        .catch(() => {
+          /* backend may be off */
+        });
     };
     load();
     const timer = setInterval(load, 20000);
-    window.addEventListener('focus', load);
-    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', load); };
+    window.addEventListener("focus", load);
+    return () => {
+      active = false;
+      clearInterval(timer);
+      window.removeEventListener("focus", load);
+    };
   }, []);
 
   useEffect(() => {
     if (verifications.length === 0) return;
-    setCvData(prev => {
-      const newExperiences = (prev.experience || []).map(exp => {
-        const match = verifications.find(v =>
-          v.company.trim().toLowerCase() === (exp.company || '').trim().toLowerCase() &&
-          v.role.trim().toLowerCase() === (exp.role || '').trim().toLowerCase() &&
-          (v.period || '').trim().toLowerCase() === (exp.period || '').trim().toLowerCase()
+    setCvData((prev) => {
+      const newExperiences = (prev.experience || []).map((exp) => {
+        const match = verifications.find(
+          (v) =>
+            v.company.trim().toLowerCase() ===
+              (exp.company || "").trim().toLowerCase() &&
+            v.role.trim().toLowerCase() ===
+              (exp.role || "").trim().toLowerCase() &&
+            (v.period || "").trim().toLowerCase() ===
+              (exp.period || "").trim().toLowerCase(),
         );
         if (!match) return exp;
         return {
@@ -235,24 +448,31 @@ export const CVBuilder: React.FC = () => {
           verificationNote: match.note,
         };
       });
-      if (JSON.stringify(newExperiences) === JSON.stringify(prev.experience)) return prev;
+      if (JSON.stringify(newExperiences) === JSON.stringify(prev.experience))
+        return prev;
       return { ...prev, experience: newExperiences };
     });
   }, [verifications, cvData.experience]);
 
   // Handle Analyzing JD & Matching Courses
-  const handleAnalyzeJD = async (inputJdText: string, _fileName?: string, file?: File) => {
+  const handleAnalyzeJD = async (
+    inputJdText: string,
+    _fileName?: string,
+    file?: File,
+  ) => {
     setJdText(inputJdText);
     setIsMatchingLoading(true);
-    setApiMessage('');
+    setApiMessage("");
     let normalizedJd = inputJdText;
     try {
       const parsed = await parseJobDescription(inputJdText, file);
       if (parsed.markdown.trim()) normalizedJd = parsed.markdown;
       setJdText(normalizedJd);
       const selectedCourses = rawDbSubjects
-        .filter(subject => Number.isFinite(subject.combinedResult ?? subject.result))
-        .map(subject => ({
+        .filter((subject) =>
+          Number.isFinite(subject.combinedResult ?? subject.result),
+        )
+        .map((subject) => ({
           course_id: subject.subjectCode,
           course_name: subject.subjectName,
           grade: subject.combinedResult ?? subject.result,
@@ -260,21 +480,25 @@ export const CVBuilder: React.FC = () => {
         }));
 
       if (!selectedCourses.length) {
-        throw new Error('Chưa có điểm học phần thực tế để tạo CV.');
+        throw new Error("Chưa có điểm học phần thực tế để tạo CV.");
       }
 
-      const projects = cvData.projects.map(project => ({
+      const projects = cvData.projects.map((project) => ({
         project_name: project.name,
         role: project.role,
         description: project.description,
         technologies: project.technologies,
       }));
       const jdLower = normalizedJd.toLowerCase();
-      const requiredSkills = [...new Set([
-        ...cvData.skills,
-        ...extractJDTechnologySkills(normalizedJd),
-        ...projects.flatMap(project => project.technologies as string[]),
-      ].filter(skill => jdLower.includes(skill.toLowerCase())))];
+      const requiredSkills = [
+        ...new Set(
+          [
+            ...cvData.skills,
+            ...extractJDTechnologySkills(normalizedJd),
+            ...projects.flatMap((project) => project.technologies as string[]),
+          ].filter((skill) => jdLower.includes(skill.toLowerCase())),
+        ),
+      ];
 
       const result = await generateCVFullPipeline({
         student: {
@@ -282,9 +506,9 @@ export const CVBuilder: React.FC = () => {
           full_name: cvData.profile.fullName,
           email: cvData.profile.email,
           phone: cvData.profile.phoneNumber,
-          major: cvData.profile.major || 'Công nghệ thông tin',
-          specialization: cvData.profile.faculty || 'Kỹ thuật phần mềm',
-          academic_year: cvData.profile.academicYear || '',
+          major: cvData.profile.major || "Công nghệ thông tin",
+          specialization: cvData.profile.faculty || "Kỹ thuật phần mềm",
+          academic_year: cvData.profile.academicYear || "",
           overall_percentage: cvData.profile.gpa,
           languages: cvData.languages,
         },
@@ -298,47 +522,82 @@ export const CVBuilder: React.FC = () => {
       });
 
       const pipelineCourses = result.competency_profile.selected_courses || [];
-      const matched = pipelineCourses.map(course => ({
+      const matched = pipelineCourses.map((course) => ({
         subjectCode: course.course_id,
         subjectName: course.course_name,
         creditPoint: course.credit_point || 3,
         combinedResult: course.grade,
-        gradeC: course.grade >= 8.5 ? 'A' : course.grade >= 7 ? 'B' : course.grade >= 5.5 ? 'C' : 'D',
-        grade4: course.grade >= 8.5 ? 4 : course.grade >= 7 ? 3 : course.grade >= 5.5 ? 2 : 1,
+        gradeC:
+          course.grade >= 8.5
+            ? "A"
+            : course.grade >= 7
+              ? "B"
+              : course.grade >= 5.5
+                ? "C"
+                : "D",
+        grade4:
+          course.grade >= 8.5
+            ? 4
+            : course.grade >= 7
+              ? 3
+              : course.grade >= 5.5
+                ? 2
+                : 1,
         matchPercentage: Math.round((course.similarity_score || 0) * 100),
         matchedKeywords: course.matched_skills || course.clos || [],
-        relevanceReason: 'Được AI đối chiếu với JD, CLO và điểm học phần thực tế.',
+        relevanceReason:
+          "Được AI đối chiếu với JD, CLO và điểm học phần thực tế.",
       }));
       const generated = result.cv;
-      const profileSkills = (result.competency_profile.competency_summary?.technical_skills || [])
-        .filter(skill => (skill.confidence ?? 0) >= 0.5)
-        .map(skill => skill.skill);
+      const profileSkills = (
+        result.competency_profile.competency_summary?.technical_skills || []
+      )
+        .filter((skill) => (skill.confidence ?? 0) >= 0.5)
+        .map((skill) => skill.skill);
       const generatedLanguages = generated.languages?.length
         ? generated.languages
-        : (result.competency_profile.languages || cvData.languages);
-      const updatedCvGrades = matched.map(course => ({ subjectName: course.subjectName, score: course.combinedResult, credits: course.creditPoint }));
+        : result.competency_profile.languages || cvData.languages;
+      const updatedCvGrades = matched.map((course) => ({
+        subjectName: course.subjectName,
+        score: course.combinedResult,
+        credits: course.creditPoint,
+      }));
 
-      const generatedCategorized = Array.isArray((generated.skills as any)?.categorized)
+      const generatedCategorized = Array.isArray(
+        (generated.skills as any)?.categorized,
+      )
         ? (generated.skills as any).categorized.map((g: any) => ({
-            category: g.category || g.name || 'General Skills',
-            items: Array.isArray(g.items) ? g.items : Array.isArray(g.skills) ? g.skills : []
+            category: g.category || g.name || "General Skills",
+            items: Array.isArray(g.items)
+              ? g.items
+              : Array.isArray(g.skills)
+                ? g.skills
+                : [],
           }))
         : undefined;
 
       setMatchedCourses(matched);
-      setCvData(previous => ({
+      setCvData((previous) => ({
         ...previous,
         profile: {
           ...previous.profile,
-          fullName: generated.personal_info.full_name || previous.profile.fullName,
+          fullName:
+            generated.personal_info.full_name || previous.profile.fullName,
           email: generated.personal_info.email || previous.profile.email,
-          phoneNumber: generated.personal_info.phone || previous.profile.phoneNumber,
+          phoneNumber:
+            generated.personal_info.phone || previous.profile.phoneNumber,
         },
         summary: generated.personal_info.summary || previous.summary,
-        skills: [...new Set([...(generated.skills?.technical || []), ...(generated.skills?.tools || []), ...profileSkills])],
+        skills: [
+          ...new Set([
+            ...(generated.skills?.technical || []),
+            ...(generated.skills?.tools || []),
+            ...profileSkills,
+          ]),
+        ],
         categorizedSkills: generatedCategorized || previous.categorizedSkills,
         languages: generatedLanguages,
-        projects: generated.projects.map(project => ({
+        projects: generated.projects.map((project) => ({
           name: project.name,
           role: project.role,
           description: project.description,
@@ -346,10 +605,16 @@ export const CVBuilder: React.FC = () => {
         })),
         grades: updatedCvGrades,
       }));
-      setSelectedGrades(updatedCvGrades.map(grade => grade.subjectName));
-      setApiMessage(`Đã hoàn tất full pipeline — ATS: ${String(result.ats_report.ats_score ?? result.ats_report.score ?? 'đang đánh giá')}; kiểm chứng evidence: ${String(result.validation_report.evidence_score ?? 'đã chạy')}.`);
+      setSelectedGrades(updatedCvGrades.map((grade) => grade.subjectName));
+      setApiMessage(
+        `Đã hoàn tất full pipeline — ATS: ${String(result.ats_report.ats_score ?? result.ats_report.score ?? "đang đánh giá")}; kiểm chứng evidence: ${String(result.validation_report.evidence_score ?? "đã chạy")}.`,
+      );
     } catch (error) {
-      setApiMessage(error instanceof Error ? error.message : 'Không thể chạy full pipeline. Vui lòng thử lại.');
+      setApiMessage(
+        error instanceof Error
+          ? error.message
+          : "Không thể chạy full pipeline. Vui lòng thử lại.",
+      );
     } finally {
       setIsMatchingLoading(false);
     }
@@ -361,26 +626,27 @@ export const CVBuilder: React.FC = () => {
     void handleAnalyzeJD(jdText);
   }, [shouldRegenerateAfterProject]);
 
-
   const handleProfileFieldChange = (field: string, value: any) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
       profile: {
         ...prev.profile,
-        [field]: value
-      }
+        [field]: value,
+      },
     }));
   };
 
   const handleFieldChange = (field: keyof CVData, value: any) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
-  const [perCategoryInput, setPerCategoryInput] = useState<Record<string, string>>({});
-  const [newCategoryName, setNewCategoryName] = useState<string>('');
+  const [perCategoryInput, setPerCategoryInput] = useState<
+    Record<string, string>
+  >({});
+  const [newCategoryName, setNewCategoryName] = useState<string>("");
 
   const activeSkillGroups = useMemo(() => {
     return getFormattedSkillGroups(cvData);
@@ -390,12 +656,12 @@ export const CVBuilder: React.FC = () => {
     const trimmed = itemStr.trim();
     if (!trimmed) return;
 
-    const currentGroups = activeSkillGroups.map(g => ({
+    const currentGroups = activeSkillGroups.map((g) => ({
       category: g.category,
-      items: [...g.items]
+      items: [...g.items],
     }));
 
-    let targetGroup = currentGroups.find(g => g.category === categoryName);
+    let targetGroup = currentGroups.find((g) => g.category === categoryName);
     if (!targetGroup) {
       targetGroup = { category: categoryName, items: [] };
       currentGroups.push(targetGroup);
@@ -405,29 +671,34 @@ export const CVBuilder: React.FC = () => {
       targetGroup.items.push(trimmed);
     }
 
-    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+    const allSkills = [...new Set(currentGroups.flatMap((g) => g.items))];
 
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
       skills: allSkills,
-      categorizedSkills: currentGroups
+      categorizedSkills: currentGroups,
     }));
 
-    setPerCategoryInput(prev => ({ ...prev, [categoryName]: '' }));
+    setPerCategoryInput((prev) => ({ ...prev, [categoryName]: "" }));
   };
 
-  const handleRemoveItemFromCategory = (_categoryName: string, itemStr: string) => {
-    const currentGroups = activeSkillGroups.map(g => ({
-      category: g.category,
-      items: g.items.filter(i => i !== itemStr)
-    })).filter(g => g.items.length > 0);
+  const handleRemoveItemFromCategory = (
+    _categoryName: string,
+    itemStr: string,
+  ) => {
+    const currentGroups = activeSkillGroups
+      .map((g) => ({
+        category: g.category,
+        items: g.items.filter((i) => i !== itemStr),
+      }))
+      .filter((g) => g.items.length > 0);
 
-    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+    const allSkills = [...new Set(currentGroups.flatMap((g) => g.items))];
 
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
       skills: allSkills,
-      categorizedSkills: currentGroups
+      categorizedSkills: currentGroups,
     }));
   };
 
@@ -435,104 +706,110 @@ export const CVBuilder: React.FC = () => {
     const trimmedCat = newCategoryName.trim();
     if (!trimmedCat) return;
 
-    const currentGroups = activeSkillGroups.map(g => ({
+    const currentGroups = activeSkillGroups.map((g) => ({
       category: g.category,
-      items: [...g.items]
+      items: [...g.items],
     }));
 
-    if (!currentGroups.some(g => g.category.toLowerCase() === trimmedCat.toLowerCase())) {
+    if (
+      !currentGroups.some(
+        (g) => g.category.toLowerCase() === trimmedCat.toLowerCase(),
+      )
+    ) {
       currentGroups.push({ category: trimmedCat, items: [] });
     }
 
-    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+    const allSkills = [...new Set(currentGroups.flatMap((g) => g.items))];
 
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
       skills: allSkills,
-      categorizedSkills: currentGroups
+      categorizedSkills: currentGroups,
     }));
 
-    setNewCategoryName('');
+    setNewCategoryName("");
   };
 
   const handleRemoveCategoryGroup = (categoryName: string) => {
-    const currentGroups = activeSkillGroups.filter(g => g.category !== categoryName);
-    const allSkills = [...new Set(currentGroups.flatMap(g => g.items))];
+    const currentGroups = activeSkillGroups.filter(
+      (g) => g.category !== categoryName,
+    );
+    const allSkills = [...new Set(currentGroups.flatMap((g) => g.items))];
 
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
       skills: allSkills,
-      categorizedSkills: currentGroups
+      categorizedSkills: currentGroups,
     }));
   };
 
-
-
   const handleAddLanguage = () => {
     if (newLanguage.trim() && !cvData.languages.includes(newLanguage.trim())) {
-      setCvData(prev => ({
+      setCvData((prev) => ({
         ...prev,
-        languages: [...prev.languages, newLanguage.trim()]
+        languages: [...prev.languages, newLanguage.trim()],
       }));
-      setNewLanguage('');
+      setNewLanguage("");
     }
   };
 
   const handleRemoveLanguage = (lang: string) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      languages: prev.languages.filter(l => l !== lang)
+      languages: prev.languages.filter((l) => l !== lang),
     }));
   };
 
   const handleAddActivity = () => {
     if (newActivity.trim() && !cvData.activities.includes(newActivity.trim())) {
-      setCvData(prev => ({
+      setCvData((prev) => ({
         ...prev,
-        activities: [...prev.activities, newActivity.trim()]
+        activities: [...prev.activities, newActivity.trim()],
       }));
-      setNewActivity('');
+      setNewActivity("");
     }
   };
 
   const handleRemoveActivity = (act: string) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      activities: prev.activities.filter(a => a !== act)
+      activities: prev.activities.filter((a) => a !== act),
     }));
   };
 
   // Handlers for Projects
   const handleAddProject = (project: Project) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      projects: [...prev.projects, project]
+      projects: [...prev.projects, project],
     }));
     if (jdText.trim()) {
-      setApiMessage('Đã thêm project. Đang cập nhật lại summary và CV theo dữ liệu mới...');
+      setApiMessage(
+        "Đã thêm project. Đang cập nhật lại summary và CV theo dữ liệu mới...",
+      );
       setShouldRegenerateAfterProject(true);
     }
   };
 
   const handleRemoveProject = (index: number) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      projects: prev.projects.filter((_, idx) => idx !== index)
+      projects: prev.projects.filter((_, idx) => idx !== index),
     }));
   };
 
   // Handlers for Experience (Internship)
   const handleAddExperience = (exp: Experience) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      experience: [...(prev.experience || []), exp]
+      experience: [...(prev.experience || []), exp],
     }));
   };
 
   const handleRemoveExperience = (index: number) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      experience: (prev.experience || []).filter((_, idx) => idx !== index)
+      experience: (prev.experience || []).filter((_, idx) => idx !== index),
     }));
   };
 
@@ -540,9 +817,9 @@ export const CVBuilder: React.FC = () => {
   const handleExportMau07 = async (exp: Experience) => {
     const blob = await exportMau07Docx(cvData, exp, user?.username);
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
-    link.download = `Mau07_TTTN_${(exp.company || 'KinhNghiem').replace(/\s+/g, '_')}.docx`;
+    link.download = `Mau07_TTTN_${(exp.company || "KinhNghiem").replace(/\s+/g, "_")}.docx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -552,83 +829,167 @@ export const CVBuilder: React.FC = () => {
   // Submit a signed Mẫu 07 for lecturer approval
   const handleSubmitVerification = async (exp: Experience, file: File) => {
     const result = await submitVerification({
-      studentName: cvData.profile.fullName || user?.fullName || 'Sinh viên',
-      studentCode: cvData.profile.studentCode || user?.username || '',
+      studentName: cvData.profile.fullName || user?.fullName || "Sinh viên",
+      studentCode: cvData.profile.studentCode || user?.username || "",
       experience: exp,
       file,
     });
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      experience: (prev.experience || []).map(e =>
-        e.company === exp.company && e.role === exp.role && (e.period || '') === (exp.period || '')
-          ? { ...e, verificationId: result.id, verificationStatus: result.status }
-          : e
+      experience: (prev.experience || []).map((e) =>
+        e.company === exp.company &&
+        e.role === exp.role &&
+        (e.period || "") === (exp.period || "")
+          ? {
+              ...e,
+              verificationId: result.id,
+              verificationStatus: result.status,
+            }
+          : e,
       ),
     }));
-    setApiMessage('Đã nộp phiếu Mẫu 07. Đang chờ trưởng khoa duyệt. Mục thực tập sẽ hiển thị trên CV sau khi được duyệt.');
-    getMyVerifications().then(list => setVerifications(list)).catch(() => {});
+    setApiMessage(
+      "Đã nộp phiếu Mẫu 07. Đang chờ trưởng khoa duyệt. Mục thực tập sẽ hiển thị trên CV sau khi được duyệt.",
+    );
+    getMyVerifications()
+      .then((list) => setVerifications(list))
+      .catch(() => {});
+  };
+
+  // Handlers for Education
+  const handleAddEducation = (item: EducationItem) => {
+    setCvData((prev) => ({
+      ...prev,
+      education: [...(prev.education && prev.education.length > 0 ? prev.education : [
+        {
+          school: "Trường Cao đẳng Tây Đô",
+          major: prev.profile.major ? `${prev.profile.major}${prev.profile.faculty ? ` (${prev.profile.faculty})` : ''}` : "Kỹ thuật Phần mềm",
+          period: prev.profile.academicYear || "",
+          gpa: prev.profile.gpa > 0 ? prev.profile.gpa : undefined,
+          degree: "Cao đẳng"
+        }
+      ]), item],
+    }));
+  };
+
+  const handleUpdateEducation = (index: number, item: EducationItem) => {
+    setCvData((prev) => {
+      const currentEduList = prev.education && prev.education.length > 0 ? prev.education : [
+        {
+          school: "Trường Cao đẳng Tây Đô",
+          major: prev.profile.major ? `${prev.profile.major}${prev.profile.faculty ? ` (${prev.profile.faculty})` : ''}` : "Kỹ thuật Phần mềm",
+          period: prev.profile.academicYear || "",
+          gpa: prev.profile.gpa > 0 ? prev.profile.gpa : undefined,
+          degree: "Cao đẳng"
+        }
+      ];
+      return {
+        ...prev,
+        education: currentEduList.map((e, idx) => (idx === index ? item : e)),
+      };
+    });
+  };
+
+  const handleRemoveEducation = (index: number) => {
+    setCvData((prev) => {
+      const currentEduList = prev.education && prev.education.length > 0 ? prev.education : [
+        {
+          school: "Trường Cao đẳng Tây Đô",
+          major: prev.profile.major ? `${prev.profile.major}${prev.profile.faculty ? ` (${prev.profile.faculty})` : ''}` : "Kỹ thuật Phần mềm",
+          period: prev.profile.academicYear || "",
+          gpa: prev.profile.gpa > 0 ? prev.profile.gpa : undefined,
+          degree: "Cao đẳng"
+        }
+      ];
+      return {
+        ...prev,
+        education: currentEduList.filter((_, idx) => idx !== index),
+      };
+    });
   };
 
   // Handlers for Certifications
+
   const handleAddCert = (cert: Certification) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      certifications: [...(prev.certifications || []), cert]
+      certifications: [...(prev.certifications || []), cert],
     }));
   };
 
   const handleRemoveCert = (index: number) => {
-    setCvData(prev => ({
+    setCvData((prev) => ({
       ...prev,
-      certifications: (prev.certifications || []).filter((_, idx) => idx !== index)
+      certifications: (prev.certifications || []).filter(
+        (_, idx) => idx !== index,
+      ),
     }));
   };
 
   const toggleGradeSelection = (subjectName: string) => {
-    setSelectedGrades(prev => 
-      prev.includes(subjectName) 
-        ? prev.filter(name => name !== subjectName)
-        : [...prev, subjectName]
+    setSelectedGrades((prev) =>
+      prev.includes(subjectName)
+        ? prev.filter((name) => name !== subjectName)
+        : [...prev, subjectName],
     );
   };
 
   const handleSave = async () => {
     try {
-      const response = await axios.post<{ id: string; title: string; updatedAt: string }>('http://localhost:5000/api/saved-cvs', {
+      const response = await axios.post<{
+        id: string;
+        title: string;
+        updatedAt: string;
+      }>("http://localhost:5000/api/saved-cvs", {
         id: savedCVId,
-        title: cvData.profile.fullName ? `CV ${cvData.profile.fullName}` : 'CV chưa đặt tên',
+        title: cvData.profile.fullName
+          ? `CV ${cvData.profile.fullName}`
+          : "CV chưa đặt tên",
         contentJson: JSON.stringify({ cvData, jdText, selectedGrades }),
       });
       setSavedCVId(response.data.id);
-      setSavedCVs(previous => [
-        { id: response.data.id, title: response.data.title, updatedAt: response.data.updatedAt },
-        ...previous.filter(cv => cv.id !== response.data.id),
+      setSavedCVs((previous) => [
+        {
+          id: response.data.id,
+          title: response.data.title,
+          updatedAt: response.data.updatedAt,
+        },
+        ...previous.filter((cv) => cv.id !== response.data.id),
       ]);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     } catch {
-      setApiMessage('Không thể lưu CV. Vui lòng thử lại.');
+      setApiMessage("Không thể lưu CV. Vui lòng thử lại.");
     }
   };
 
   const handleLoadSavedCV = async (id: string) => {
     if (!id) return;
     try {
-      const response = await axios.get<{ id: string; content: string }>(`http://localhost:5000/api/saved-cvs/${id}`);
-      const saved = JSON.parse(response.data.content) as { cvData: CVData; jdText?: string; selectedGrades?: string[] };
+      const response = await axios.get<{ id: string; content: string }>(
+        `http://localhost:5000/api/saved-cvs/${id}`,
+      );
+      const saved = JSON.parse(response.data.content) as {
+        cvData: CVData;
+        jdText?: string;
+        selectedGrades?: string[];
+      };
       setCvData(saved.cvData);
-      setJdText(saved.jdText || '');
-      setSelectedGrades(saved.selectedGrades || saved.cvData.grades.map(grade => grade.subjectName));
+      setJdText(saved.jdText || "");
+      setSelectedGrades(
+        saved.selectedGrades ||
+          saved.cvData.grades.map((grade) => grade.subjectName),
+      );
       setSavedCVId(response.data.id);
-      setActiveTab('cv-editor');
-      setApiMessage('Đã mở CV đã lưu để tiếp tục chỉnh sửa.');
+      setActiveTab("cv-editor");
+      setApiMessage("Đã mở CV đã lưu để tiếp tục chỉnh sửa.");
     } catch {
-      setApiMessage('Không thể mở CV đã lưu.');
+      setApiMessage("Không thể mở CV đã lưu.");
     }
   };
 
   const handleExportPDF = async () => {
-    const element = document.getElementById('printable-cv');
+    const element = document.getElementById("printable-cv");
     if (!element) return;
 
     setIsExportingPdf(true);
@@ -636,9 +997,9 @@ export const CVBuilder: React.FC = () => {
     try {
       const blob = await exportCVPdf({ ...cvData, experience: cvExperience });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
-      link.download = `CV_${(cvData.profile.fullName || 'Student').replace(/\s+/g, '_')}.pdf`;
+      link.download = `CV_${(cvData.profile.fullName || "Student").replace(/\s+/g, "_")}.pdf`;
       link.click();
       URL.revokeObjectURL(url);
       setIsExportingPdf(false);
@@ -652,8 +1013,9 @@ export const CVBuilder: React.FC = () => {
         return (window as any).html2pdf;
       }
       return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js';
+        const script = document.createElement("script");
+        script.src =
+          "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
         script.onload = () => resolve((window as any).html2pdf);
         script.onerror = (e) => reject(e);
         document.head.appendChild(script);
@@ -663,52 +1025,129 @@ export const CVBuilder: React.FC = () => {
     try {
       const html2pdfLib = await getHtml2Pdf();
       const opt = {
-        margin: [8, 8, 8, 8],
-        filename: `CV_${(cvData.profile.fullName || 'Student').replace(/\s+/g, '_')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, logging: false },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        margin: [10, 10, 12, 10],
+
+
+        filename: `CV_${(cvData.profile.fullName || "Student").replace(/\s+/g, "_")}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          onclone: (clonedDoc: Document) => {
+            const el = clonedDoc.getElementById("printable-cv");
+            if (el) {
+              el.style.position = "static";
+              el.style.opacity = "1";
+              el.style.visibility = "visible";
+            }
+          }
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ['css', 'legacy'] }
       };
+
 
       await html2pdfLib().set(opt).from(element).save();
       setIsExportingPdf(false);
     } catch (err) {
-      console.warn('html2pdf library loading failed, falling back to window.print():', err);
+      console.error("PDF export failed:", err);
       setIsExportingPdf(false);
-      window.print();
+      setApiMessage("Không thể tải file PDF. Vui lòng thử lại sau.");
     }
   };
 
 
   return (
-    <div className="fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)' }}>
+    <div
+      className="fade-in"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--space-md)",
+      }}
+    >
       {/* Header and Actions */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+        }}
+      >
         <div>
-          <h2 style={{ fontSize: '1.3rem', fontWeight: 700, color: '#F8FAFC', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <h2
+            style={{
+              fontSize: "1.3rem",
+              fontWeight: 700,
+              color: "#F8FAFC",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
             <FileText size={26} color="#22C55E" />
             <span>Tạo CV Cá Nhân & Phân Tích JD Tuyển Dụng</span>
           </h2>
-          <p style={{ fontSize: '0.85rem', color: '#94A3B8', marginTop: '2px' }}>
-            Gom thông tin cá nhân, phân tích JD để tự động chọn các môn học có kết quả tốt nhất từ CSDL đưa vào CV.
+          <p
+            style={{ fontSize: "0.85rem", color: "#94A3B8", marginTop: "2px" }}
+          >
+            Gom thông tin cá nhân, phân tích JD để tự động chọn các môn học có
+            kết quả tốt nhất từ CSDL đưa vào CV.
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-          <select aria-label="Chọn CV đã lưu" className="input-field" value={savedCVId || ''} onChange={(event) => handleLoadSavedCV(event.target.value)} style={{ minWidth: '180px', padding: '8px 10px' }}>
+        <div
+          style={{
+            display: "flex",
+            gap: "8px",
+            alignItems: "center",
+            flexWrap: "wrap",
+          }}
+        >
+          <select
+            aria-label="Chọn CV đã lưu"
+            className="input-field"
+            value={savedCVId || ""}
+            onChange={(event) => handleLoadSavedCV(event.target.value)}
+            style={{ minWidth: "180px", padding: "8px 10px" }}
+          >
             <option value="">CV mới</option>
-            {savedCVs.map(cv => <option key={cv.id} value={cv.id}>{cv.title}</option>)}
+            {savedCVs.map((cv) => (
+              <option key={cv.id} value={cv.id}>
+                {cv.title}
+              </option>
+            ))}
           </select>
-          <button className="btn-icon-text" onClick={() => { setSavedCVId(null); setCvData(defaultCVData); setJdText(''); setSelectedGrades([]); }} style={{ background: 'rgba(30, 41, 59, 0.8)', border: '1px solid var(--color-border)' }}>
-            <Plus size={18} /><span>CV mới</span>
+          <button
+            className="btn-icon-text"
+            onClick={() => {
+              setSavedCVId(null);
+              setCvData(defaultCVData);
+              setJdText("");
+              setSelectedGrades([]);
+            }}
+            style={{
+              background: "rgba(30, 41, 59, 0.8)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <Plus size={18} />
+            <span>CV mới</span>
           </button>
-          <button 
-            className="btn-icon-text primary" 
-            onClick={handleExportPDF} 
+          <button
+            className="btn-icon-text primary"
+            onClick={handleExportPDF}
             disabled={isExportingPdf}
             style={{ opacity: isExportingPdf ? 0.7 : 1 }}
           >
-            {isExportingPdf ? <Spinner size={18} className="spin" /> : <DownloadSimple size={18} />}
-            <span>{isExportingPdf ? 'Đang tạo PDF...' : 'Tải File PDF'}</span>
+            {isExportingPdf ? (
+              <Spinner size={18} className="spin" />
+            ) : (
+              <DownloadSimple size={18} />
+            )}
+            <span>{isExportingPdf ? "Đang tạo PDF..." : "Tải File PDF"}</span>
           </button>
 
           {/* 
@@ -718,32 +1157,58 @@ export const CVBuilder: React.FC = () => {
           </button>
           */}
 
-          <button className="btn-icon-text" onClick={handleSave} style={{ background: 'rgba(30, 41, 59, 0.8)', border: '1px solid var(--color-border)' }}>
-            {saveSuccess ? <Check size={18} color="#22C55E" /> : <FloppyDisk size={18} />}
-            <span>{saveSuccess ? 'Đã lưu CV!' : 'Lưu CV'}</span>
+          <button
+            className="btn-icon-text"
+            onClick={handleSave}
+            style={{
+              background: "rgba(30, 41, 59, 0.8)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            {saveSuccess ? (
+              <Check size={18} color="#22C55E" />
+            ) : (
+              <FloppyDisk size={18} />
+            )}
+            <span>{saveSuccess ? "Đã lưu CV!" : "Lưu CV"}</span>
           </button>
         </div>
       </div>
 
-
       {/* Main Tabs Navigation */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'rgba(30, 41, 59, 0.6)', padding: '8px 12px', borderRadius: '10px', border: '1px solid var(--color-border)' }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "12px",
+          background: "rgba(30, 41, 59, 0.6)",
+          padding: "8px 12px",
+          borderRadius: "10px",
+          border: "1px solid var(--color-border)",
+        }}
+      >
         <button
-          onClick={() => setActiveTab('jd-match')}
+          onClick={() => setActiveTab("jd-match")}
           style={{
-            background: activeTab === 'jd-match' ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' : 'transparent',
-            color: activeTab === 'jd-match' ? '#FFFFFF' : '#94A3B8',
-            border: 'none',
-            padding: '10px 18px',
-            borderRadius: '8px',
-            fontSize: '0.9rem',
+            background:
+              activeTab === "jd-match"
+                ? "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)"
+                : "transparent",
+            color: activeTab === "jd-match" ? "#FFFFFF" : "#94A3B8",
+            border: "none",
+            padding: "10px 18px",
+            borderRadius: "8px",
+            fontSize: "0.9rem",
             fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: activeTab === 'jd-match' ? '0 4px 12px rgba(34, 197, 94, 0.3)' : 'none',
-            transition: 'all 0.2s ease'
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow:
+              activeTab === "jd-match"
+                ? "0 4px 12px rgba(34, 197, 94, 0.3)"
+                : "none",
+            transition: "all 0.2s ease",
           }}
         >
           <Target size={18} />
@@ -751,21 +1216,27 @@ export const CVBuilder: React.FC = () => {
         </button>
 
         <button
-          onClick={() => setActiveTab('cv-editor')}
+          onClick={() => setActiveTab("cv-editor")}
           style={{
-            background: activeTab === 'cv-editor' ? 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)' : 'transparent',
-            color: activeTab === 'cv-editor' ? '#FFFFFF' : '#94A3B8',
-            border: 'none',
-            padding: '10px 18px',
-            borderRadius: '8px',
-            fontSize: '0.9rem',
+            background:
+              activeTab === "cv-editor"
+                ? "linear-gradient(135deg, #22C55E 0%, #16A34A 100%)"
+                : "transparent",
+            color: activeTab === "cv-editor" ? "#FFFFFF" : "#94A3B8",
+            border: "none",
+            padding: "10px 18px",
+            borderRadius: "8px",
+            fontSize: "0.9rem",
             fontWeight: 600,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            boxShadow: activeTab === 'cv-editor' ? '0 4px 12px rgba(34, 197, 94, 0.3)' : 'none',
-            transition: 'all 0.2s ease'
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            boxShadow:
+              activeTab === "cv-editor"
+                ? "0 4px 12px rgba(34, 197, 94, 0.3)"
+                : "none",
+            transition: "all 0.2s ease",
           }}
         >
           <FileText size={18} />
@@ -774,30 +1245,46 @@ export const CVBuilder: React.FC = () => {
       </div>
 
       {/* Tab 1: JD Matcher Section */}
-      {activeTab === 'jd-match' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <JDInputForm 
-            onAnalyze={handleAnalyzeJD} 
+      {activeTab === "jd-match" && (
+        <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+          <JDInputForm
+            onAnalyze={handleAnalyzeJD}
             isLoading={isMatchingLoading}
             initialText={jdText}
           />
-          {apiMessage && <div role="status" style={{ color: apiMessage.startsWith('JD đã') ? '#22C55E' : '#EAB308', fontSize: '0.82rem' }}>{apiMessage}</div>}
+          {apiMessage && (
+            <div
+              role="status"
+              style={{
+                color: apiMessage.startsWith("JD đã") ? "#22C55E" : "#EAB308",
+                fontSize: "0.82rem",
+              }}
+            >
+              {apiMessage}
+            </div>
+          )}
 
           {matchedCourses.length > 0 && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div
+              style={{ display: "flex", flexDirection: "column", gap: "16px" }}
+            >
               <MatchedCoursesTable
                 courses={matchedCourses}
                 isLoading={isMatchingLoading}
                 jdText={jdText}
                 studentName={cvData.profile.fullName}
-                studentCode={user?.username || 'sv_toan'}
+                studentCode={user?.username || "sv_toan"}
               />
 
-              <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}>
                 <button
-                  onClick={() => setActiveTab('cv-editor')}
+                  onClick={() => setActiveTab("cv-editor")}
                   className="btn-icon-text primary"
-                  style={{ padding: '12px 24px', fontSize: '0.95rem', fontWeight: 700 }}
+                  style={{
+                    padding: "12px 24px",
+                    fontSize: "0.95rem",
+                    fontWeight: 700,
+                  }}
                 >
                   <span>Áp dụng danh sách môn học này vào CV & Tiếp tục</span>
                   <ArrowRight size={18} />
@@ -809,157 +1296,304 @@ export const CVBuilder: React.FC = () => {
       )}
 
       {/* Tab 2: CV Builder Editor & Live Preview */}
-      {activeTab === 'cv-editor' && (
+      {activeTab === "cv-editor" && (
         <div className="cv-builder-container">
           {/* CV Editor Column */}
           <div className="cv-editor">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-              <div><h3 style={{ margin: 0, color: '#F8FAFC' }}>Biên tập CV</h3><p style={{ margin: '4px 0 0', color: '#94A3B8', fontSize: '0.8rem' }}>Thay đổi sẽ cập nhật ngay sang bản xem trước.</p></div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <h3 style={{ margin: 0, color: "#F8FAFC" }}>Biên tập CV</h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    color: "#94A3B8",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  Thay đổi sẽ cập nhật ngay sang bản xem trước.
+                </p>
+              </div>
               <ATSScoreBadge score={atsReport.score} compact />
             </div>
             {/* Section 1: Personal Info */}
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "12px",
+                  color: "#22C55E",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <User size={18} />
                 <span>1. Thông tin cá nhân</span>
               </h3>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: "12px",
+                }}
+              >
                 <div className="form-group">
                   <label>Họ và Tên</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    value={cvData.profile.fullName} 
-                    onChange={(e) => handleProfileFieldChange('fullName', e.target.value)} 
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={cvData.profile.fullName}
+                    onChange={(e) =>
+                      handleProfileFieldChange("fullName", e.target.value)
+                    }
                   />
                 </div>
                 <div className="form-group">
                   <label>Số điện thoại</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    value={cvData.profile.phoneNumber} 
-                    onChange={(e) => handleProfileFieldChange('phoneNumber', e.target.value)} 
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={cvData.profile.phoneNumber}
+                    onChange={(e) =>
+                      handleProfileFieldChange("phoneNumber", e.target.value)
+                    }
                   />
                 </div>
                 <div className="form-group">
                   <label>Email</label>
-                  <input 
-                    type="email" 
-                    className="input-field" 
-                    value={cvData.profile.email} 
-                    onChange={(e) => handleProfileFieldChange('email', e.target.value)} 
+                  <input
+                    type="email"
+                    className="input-field"
+                    value={cvData.profile.email}
+                    onChange={(e) =>
+                      handleProfileFieldChange("email", e.target.value)
+                    }
                   />
                 </div>
                 <div className="form-group">
                   <label>Quê quán</label>
-                  <input 
-                    type="text" 
-                    className="input-field" 
-                    value={cvData.profile.hometown} 
-                    onChange={(e) => handleProfileFieldChange('hometown', e.target.value)} 
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={cvData.profile.hometown}
+                    onChange={(e) =>
+                      handleProfileFieldChange("hometown", e.target.value)
+                    }
                   />
                 </div>
                 <div className="form-group">
                   <label>Ngày sinh</label>
-                  <input 
-                    type="date" 
-                    className="input-field" 
-                    value={cvData.profile.birthDate ? cvData.profile.birthDate.slice(0, 10) : ''} 
-                    onChange={(e) => handleProfileFieldChange('birthDate', e.target.value)} 
+                  <input
+                    type="date"
+                    className="input-field"
+                    value={
+                      cvData.profile.birthDate
+                        ? cvData.profile.birthDate.slice(0, 10)
+                        : ""
+                    }
+                    onChange={(e) =>
+                      handleProfileFieldChange("birthDate", e.target.value)
+                    }
                   />
                 </div>
               </div>
             </div>
 
             {/* Section 2: Summary */}
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "12px",
+                  color: "#22C55E",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <Sparkle size={18} />
                 <span>2. Giới thiệu bản thân</span>
               </h3>
               <div className="form-group">
-                <textarea 
-                  className="input-field" 
-                  rows={3} 
-                  style={{ resize: 'vertical' }}
+                <textarea
+                  className="input-field"
+                  rows={3}
+                  style={{ resize: "vertical" }}
                   value={cvData.summary}
-                  onChange={(e) => handleFieldChange('summary', e.target.value)}
+                  onChange={(e) => handleFieldChange("summary", e.target.value)}
                 />
               </div>
             </div>
 
             {/* Section 3: Skills (COMPETENCES Grouped Input) */}
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "12px",
+                  color: "#22C55E",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <Sparkle size={18} />
-                <span>3. Kỹ năng chuyên môn (COMPETENCES)</span>
+                <span>3. Kỹ năng</span>
               </h3>
 
-
-
               {/* Grouped Skills Cards */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "12px",
+                }}
+              >
                 {activeSkillGroups.map((group) => (
-                  <div 
-                    key={group.category} 
-                    style={{ 
-                      padding: '12px', 
-                      background: 'rgba(15, 23, 42, 0.6)', 
-                      borderRadius: '8px', 
-                      border: '1px solid var(--color-border)' 
+                  <div
+                    key={group.category}
+                    style={{
+                      padding: "12px",
+                      background: "rgba(15, 23, 42, 0.6)",
+                      borderRadius: "8px",
+                      border: "1px solid var(--color-border)",
                     }}
                   >
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#22C55E' }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "0.85rem",
+                          fontWeight: 700,
+                          color: "#22C55E",
+                        }}
+                      >
                         * {group.category} ({group.items.length})
                       </span>
-                      <button 
-                        onClick={() => handleRemoveCategoryGroup(group.category)}
+                      <button
+                        onClick={() =>
+                          handleRemoveCategoryGroup(group.category)
+                        }
                         title="Xóa nhóm kỹ năng này"
-                        style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', padding: '2px 4px' }}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          color: "#EF4444",
+                          cursor: "pointer",
+                          padding: "2px 4px",
+                        }}
                       >
                         <Trash size={14} />
                       </button>
                     </div>
 
                     {/* Skill tags inside this category */}
-                    <div className="tag-list" style={{ marginBottom: '8px' }}>
+                    <div className="tag-list" style={{ marginBottom: "8px" }}>
                       {group.items.map((skill, sIdx) => (
-                        <span key={sIdx} className="tag" style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem' }}>
+                        <span
+                          key={sIdx}
+                          className="tag"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "6px",
+                            fontSize: "0.8rem",
+                          }}
+                        >
                           <span>{skill}</span>
-                          <button 
-                            onClick={() => handleRemoveItemFromCategory(group.category, skill)}
-                            style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                          <button
+                            onClick={() =>
+                              handleRemoveItemFromCategory(
+                                group.category,
+                                skill,
+                              )
+                            }
+                            style={{
+                              border: "none",
+                              background: "none",
+                              color: "#EF4444",
+                              cursor: "pointer",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
                           >
                             <Trash size={12} />
                           </button>
                         </span>
                       ))}
                       {group.items.length === 0 && (
-                        <span style={{ fontSize: '0.75rem', color: '#64748B', fontStyle: 'italic' }}>Chưa có kỹ năng trong nhóm này.</span>
+                        <span
+                          style={{
+                            fontSize: "0.75rem",
+                            color: "#64748B",
+                            fontStyle: "italic",
+                          }}
+                        >
+                          Chưa có kỹ năng trong nhóm này.
+                        </span>
                       )}
                     </div>
 
                     {/* Per-category add input */}
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                      <input 
-                        type="text" 
-                        className="input-field" 
-                        style={{ fontSize: '0.8rem', padding: '4px 8px' }}
+                    <div style={{ display: "flex", gap: "6px" }}>
+                      <input
+                        type="text"
+                        className="input-field"
+                        style={{ fontSize: "0.8rem", padding: "4px 8px" }}
                         placeholder={`+ Thêm kỹ năng vào nhóm "${group.category}"...`}
-                        value={perCategoryInput[group.category] || ''}
-                        onChange={(e) => setPerCategoryInput(prev => ({ ...prev, [group.category]: e.target.value }))}
+                        value={perCategoryInput[group.category] || ""}
+                        onChange={(e) =>
+                          setPerCategoryInput((prev) => ({
+                            ...prev,
+                            [group.category]: e.target.value,
+                          }))
+                        }
                         onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            handleAddItemToCategory(group.category, perCategoryInput[group.category] || '');
+                          if (e.key === "Enter") {
+                            handleAddItemToCategory(
+                              group.category,
+                              perCategoryInput[group.category] || "",
+                            );
                           }
                         }}
                       />
-                      <button 
+                      <button
                         className="btn-icon-text secondary"
-                        style={{ padding: '0 10px', fontSize: '0.75rem' }}
-                        onClick={() => handleAddItemToCategory(group.category, perCategoryInput[group.category] || '')}
+                        style={{ padding: "0 10px", fontSize: "0.75rem" }}
+                        onClick={() =>
+                          handleAddItemToCategory(
+                            group.category,
+                            perCategoryInput[group.category] || "",
+                          )
+                        }
                       >
                         <Plus size={14} />
                       </button>
@@ -968,18 +1602,20 @@ export const CVBuilder: React.FC = () => {
                 ))}
 
                 {/* Create new custom category */}
-                <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                  <input 
-                    type="text" 
-                    className="input-field" 
+                <div style={{ display: "flex", gap: "8px", marginTop: "4px" }}>
+                  <input
+                    type="text"
+                    className="input-field"
                     placeholder="Tên nhóm kỹ năng mới (ví dụ: Domain Knowledge, Certifications)..."
                     value={newCategoryName}
                     onChange={(e) => setNewCategoryName(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleAddCategoryGroup()}
+                    onKeyDown={(e) =>
+                      e.key === "Enter" && handleAddCategoryGroup()
+                    }
                   />
-                  <button 
+                  <button
                     className="btn-icon-text secondary"
-                    style={{ padding: '0 16px', whiteSpace: 'nowrap' }}
+                    style={{ padding: "0 16px", whiteSpace: "nowrap" }}
                     onClick={handleAddCategoryGroup}
                   >
                     <Plus size={16} />
@@ -989,33 +1625,67 @@ export const CVBuilder: React.FC = () => {
               </div>
             </div>
 
-
             {/* Section 4: Languages */}
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "12px",
+                  color: "#22C55E",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <Sparkle size={18} />
                 <span>4. Ngoại ngữ</span>
               </h3>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="Nhập ngoại ngữ (ví dụ: Tiếng Anh)" 
-                  value={newLanguage} 
+              <div
+                style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
+              >
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Nhập ngoại ngữ (ví dụ: Tiếng Anh)"
+                  value={newLanguage}
                   onChange={(e) => setNewLanguage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddLanguage()}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddLanguage()}
                 />
-                <button className="btn-icon-text primary" onClick={handleAddLanguage} style={{ padding: '0 16px' }}>
+                <button
+                  className="btn-icon-text primary"
+                  onClick={handleAddLanguage}
+                  style={{ padding: "0 16px" }}
+                >
                   <Plus size={20} />
                 </button>
               </div>
               <div className="tag-list">
                 {cvData.languages.map((lang, idx) => (
-                  <span key={idx} className="tag" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span
+                    key={idx}
+                    className="tag"
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                    }}
+                  >
                     <span>{lang}</span>
-                    <button 
+                    <button
                       onClick={() => handleRemoveLanguage(lang)}
-                      style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer', display: 'flex', alignItems: 'center' }}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        color: "#EF4444",
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                      }}
                     >
                       <Trash size={14} />
                     </button>
@@ -1024,8 +1694,33 @@ export const CVBuilder: React.FC = () => {
               </div>
             </div>
 
+            {/* Section 4.5: EducationForm Component */}
+            <EducationForm
+              education={
+                cvData.education && cvData.education.length > 0
+                  ? cvData.education
+                  : [
+                      {
+                        school: "Trường Cao đẳng Tây Đô",
+                        major: cvData.profile.major
+                          ? `${cvData.profile.major}${
+                              cvData.profile.faculty ? ` (${cvData.profile.faculty})` : ""
+                            }`
+                          : "Kỹ thuật Phần mềm",
+                        period: cvData.profile.academicYear || "",
+                        gpa: cvData.profile.gpa > 0 ? cvData.profile.gpa : undefined,
+                        degree: "Cao đẳng",
+                      },
+                    ]
+              }
+              onAddEducation={handleAddEducation}
+              onUpdateEducation={handleUpdateEducation}
+              onRemoveEducation={handleRemoveEducation}
+            />
+
             {/* Section 5: ProjectForm Component */}
             <ProjectForm
+
               projects={cvData.projects}
               onAddProject={handleAddProject}
               onRemoveProject={handleRemoveProject}
@@ -1048,30 +1743,82 @@ export const CVBuilder: React.FC = () => {
             />
 
             {/* Section 8: Grades Showcase */}
-            <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div
+              style={{
+                borderBottom: "1px solid var(--color-border)",
+                paddingBottom: "16px",
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "12px",
+                  color: "#22C55E",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <GraduationCap size={18} />
-                <span>8. Hiển thị kết quả môn học đã matched (Từ CSDL Supabase)</span>
+                <span>
+                  8. Hiển thị kết quả môn học đã matched (Từ CSDL Supabase)
+                </span>
               </h3>
-              <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '8px' }}>
-                Chọn các môn học đã được AI khớp với JD để hiển thị vào CV ứng tuyển:
+              <p
+                style={{
+                  fontSize: "0.8rem",
+                  color: "#94A3B8",
+                  marginBottom: "8px",
+                }}
+              >
+                Chọn các môn học đã được AI khớp với JD để hiển thị vào CV ứng
+                tuyển:
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+              >
                 {cvData.grades.map((grade) => (
-                  <label 
-                    key={grade.subjectName} 
-                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--color-border)', borderRadius: '6px', cursor: 'pointer' }}
+                  <label
+                    key={grade.subjectName}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: "8px 12px",
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid var(--color-border)",
+                      borderRadius: "6px",
+                      cursor: "pointer",
+                    }}
                   >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <input 
-                        type="checkbox" 
-                        checked={selectedGrades.includes(grade.subjectName)} 
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selectedGrades.includes(grade.subjectName)}
                         onChange={() => toggleGradeSelection(grade.subjectName)}
                       />
-                      <span style={{ fontSize: '0.85rem' }}>{grade.subjectName}</span>
+                      <span style={{ fontSize: "0.85rem" }}>
+                        {grade.subjectName}
+                      </span>
                     </div>
-                    <span style={{ fontFamily: 'var(--font-heading)', color: '#22C55E', fontWeight: 700, fontSize: '0.85rem' }}>
-                      {typeof grade.score === 'number' ? grade.score.toFixed(1) : grade.score} / 10
+                    <span
+                      style={{
+                        fontFamily: "var(--font-heading)",
+                        color: "#22C55E",
+                        fontWeight: 700,
+                        fontSize: "0.85rem",
+                      }}
+                    >
+                      {typeof grade.score === "number"
+                        ? grade.score.toFixed(1)
+                        : grade.score}{" "}
+                      / 10
                     </span>
                   </label>
                 ))}
@@ -1085,31 +1832,64 @@ export const CVBuilder: React.FC = () => {
             />
 
             {/* Section 10: Activities */}
-            <div style={{ paddingBottom: '16px' }}>
-              <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <div style={{ paddingBottom: "16px" }}>
+              <h3
+                style={{
+                  fontSize: "1rem",
+                  marginBottom: "12px",
+                  color: "#22C55E",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "6px",
+                }}
+              >
                 <Sparkle size={18} />
                 <span>10. Hoạt động ngoại khóa</span>
               </h3>
-              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                <input 
-                  type="text" 
-                  className="input-field" 
-                  placeholder="Nhập hoạt động..." 
-                  value={newActivity} 
+              <div
+                style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
+              >
+                <input
+                  type="text"
+                  className="input-field"
+                  placeholder="Nhập hoạt động..."
+                  value={newActivity}
                   onChange={(e) => setNewActivity(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddActivity()}
+                  onKeyDown={(e) => e.key === "Enter" && handleAddActivity()}
                 />
-                <button className="btn-icon-text primary" onClick={handleAddActivity} style={{ padding: '0 16px' }}>
+                <button
+                  className="btn-icon-text primary"
+                  onClick={handleAddActivity}
+                  style={{ padding: "0 16px" }}
+                >
                   <Plus size={20} />
                 </button>
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
+              >
                 {cvData.activities.map((act, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--color-border)', padding: '8px 12px', borderRadius: '6px' }}>
-                    <span style={{ fontSize: '0.85rem' }}>{act}</span>
-                    <button 
+                  <div
+                    key={idx}
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      background: "rgba(255,255,255,0.02)",
+                      border: "1px solid var(--color-border)",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
+                    }}
+                  >
+                    <span style={{ fontSize: "0.85rem" }}>{act}</span>
+                    <button
                       onClick={() => handleRemoveActivity(act)}
-                      style={{ border: 'none', background: 'none', color: '#EF4444', cursor: 'pointer' }}
+                      style={{
+                        border: "none",
+                        background: "none",
+                        color: "#EF4444",
+                        cursor: "pointer",
+                      }}
                     >
                       <Trash size={16} />
                     </button>
@@ -1121,142 +1901,63 @@ export const CVBuilder: React.FC = () => {
           </div>
 
           {/* CV Live Preview Column */}
-          <CVPreview cvData={{ ...cvData, experience: cvExperience }} selectedGrades={selectedGrades}>
-            {/* Printable Container A4 */}
-            <div id="printable-cv" className="cv-a4-sheet" style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%' }}>
-              {/* CV Header */}
-              <div className="cv-pdf-header">
-                <div>
-                  <div className="cv-pdf-name">{cvData.profile.fullName}</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 600, color: '#22C55E', marginTop: '2px' }}>{cvData.profile.major}</div>
-                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginTop: '2px' }}>{cvData.profile.faculty} - Tây Đô College</div>
-                </div>
-                <div className="cv-pdf-contact">
-                  <div>Email: {cvData.profile.email}</div>
-                  <div>SĐT: {cvData.profile.phoneNumber}</div>
-                  <div>Địa chỉ: {cvData.profile.hometown}</div>
-                </div>
+          <div
+            style={{ display: "flex", flexDirection: "column", width: "100%" }}
+          >
+            {/* Flexible Viewer Toolbar */}
+            <div className="cv-viewer-toolbar">
+              <div className="cv-viewer-toolbar-title">
+                <FileText size={18} />
+                <span>CV Live Preview (Overleaf Harshibar Template)</span>
               </div>
-
-              {/* Summary */}
-              <div className="cv-pdf-section">
-                <div className="cv-pdf-section-title">Giới thiệu bản thân</div>
-                <p style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>{cvData.summary}</p>
-              </div>
-
-              {/* Grid for Skills & Languages */}
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '16px' }}>
-                <div className="cv-pdf-section">
-                  <div className="cv-pdf-section-title">COMPETENCES</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '4px' }}>
-                    {getFormattedSkillGroups(cvData).map(group => (
-                      <div key={group.category} style={{ fontSize: '0.85rem', color: '#1E293B', lineHeight: '1.5' }}>
-                        <strong style={{ color: '#0F172A', fontWeight: 700 }}>* {group.category}:</strong> {group.items.join(', ')}.
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="cv-pdf-section">
-                  <div className="cv-pdf-section-title">Ngoại ngữ</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', marginTop: '4px' }}>
-                    {cvData.languages.map((lang, idx) => (
-                      <div key={idx} style={{ fontWeight: 500 }}>• {lang}</div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-
-              {/* Projects */}
-              <div className="cv-pdf-section">
-                <div className="cv-pdf-section-title">Dự án đã thực hiện</div>
-                <div className="cv-pdf-grid" style={{ marginTop: '4px' }}>
-                  {cvData.projects.map((proj, idx) => (
-                    <div key={idx} className="cv-pdf-project-card">
-                      <div className="cv-pdf-project-title">{proj.name}</div>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#475569', marginTop: '2px' }}>Vai trò: {proj.role}</div>
-                      <p style={{ fontSize: '0.75rem', color: '#475569', marginTop: '4px', lineHeight: '1.4' }}>{proj.description}</p>
-                      <div className="cv-pdf-project-tech">
-                        Công nghệ: {Array.isArray(proj.technologies) ? proj.technologies.join(', ') : proj.technologies}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Internship Experience (Live Preview A4) */}
-              {cvExperience.length > 0 && (
-                <div className="cv-pdf-section">
-                  <div className="cv-pdf-section-title">Kinh nghiệm thực tập & làm việc</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginTop: '4px' }}>
-                    {cvExperience.map((exp, idx) => (
-                      <div key={idx} style={{ padding: '6px 10px', background: '#F8FAFC', border: '1px solid #22C55E', borderRadius: '4px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#0F172A' }}>{exp.company}</span>
-                          <span className="cv-verified-chip">✓ Đã duyệt</span>
-                        </div>
-                        <div style={{ fontSize: '0.75rem', color: '#22C55E', fontWeight: 600 }}>
-                          {exp.role} {exp.period ? `(${exp.period})` : ''}
-                        </div>
-                        {exp.description && (
-                          <p style={{ fontSize: '0.75rem', color: '#475569', marginTop: '2px', lineHeight: '1.4' }}>
-                            {exp.description}
-                          </p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Certifications (Live Preview A4) */}
-              {cvData.certifications && cvData.certifications.length > 0 && (
-                <div className="cv-pdf-section">
-                  <div className="cv-pdf-section-title">Chứng chỉ & Bằng cấp</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '4px' }}>
-                    {cvData.certifications.map((cert, idx) => (
-                      <span key={idx} className="cv-tag">
-                        {cert.certificationName} {cert.date ? `(${cert.date})` : ''}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Academic results (Autofilled from database) */}
-              <div className="cv-pdf-section">
-                <div className="cv-pdf-section-title">Kết quả môn học tiêu biểu (Xác thực CSDL Tây Đô)</div>
-                <p style={{ fontSize: '0.75rem', color: '#64748B', fontStyle: 'italic', marginBottom: '4px' }}>
-                  * Bảng điểm môn học đã qua phân tích khớp với yêu cầu JD tuyển dụng:
-                </p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '8px' }}>
-                  {cvData.grades
-                    .filter(g => selectedGrades.includes(g.subjectName))
-                    .map((grade) => (
-                      <div 
-                        key={grade.subjectName} 
-                        style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 12px', border: '1px solid #E2E8F0', borderRadius: '4px', background: '#F8FAFC', fontSize: '0.8rem' }}
-                      >
-                        <span style={{ fontWeight: 500 }}>{grade.subjectName}</span>
-                        <span style={{ fontWeight: 700, color: '#22C55E' }}>
-                          {typeof grade.score === 'number' ? grade.score.toFixed(1) : grade.score} / 10
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-
-              {/* Extracurricular Activities */}
-              <div className="cv-pdf-section">
-                <div className="cv-pdf-section-title">Hoạt động ngoại khóa</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.8rem', marginTop: '4px' }}>
-                  {cvData.activities.map((act, idx) => (
-                    <div key={idx} style={{ lineHeight: '1.4' }}>• {act}</div>
-                  ))}
-                </div>
+              <div className="cv-viewer-controls">
+                <button
+                  className="cv-zoom-btn"
+                  onClick={handleZoomOut}
+                  title="Thu nhỏ (Zoom Out)"
+                >
+                  <MagnifyingGlassMinus size={14} />
+                  <span>−</span>
+                </button>
+                <span className="cv-zoom-label">
+                  {Math.round(zoomLevel * 100)}%
+                </span>
+                <button
+                  className="cv-zoom-btn"
+                  onClick={handleZoomIn}
+                  title="Phóng to (Zoom In)"
+                >
+                  <MagnifyingGlassPlus size={14} />
+                  <span>+</span>
+                </button>
+                <button
+                  className="cv-zoom-btn"
+                  onClick={handleZoomReset}
+                  title="Mặc định (75%)"
+                >
+                  <CornersOut size={14} />
+                  <span>Fit</span>
+                </button>
               </div>
             </div>
-          </CVPreview>
+
+            {/* Scrollable Viewer Container */}
+            <div className="cv-viewer-container" ref={viewerContainerRef}>
+              <div
+                ref={previewWrapperRef}
+                style={{
+                  transform: `scale(${zoomLevel})`,
+                  transformOrigin: "top center",
+                  transition: "transform 0.1s cubic-bezier(0.25, 0.46, 0.45, 0.94)",
+                }}
+              >
+                <CVPreview
+                  cvData={{ ...cvData, experience: cvExperience }}
+                  selectedGrades={selectedGrades}
+                />
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>
