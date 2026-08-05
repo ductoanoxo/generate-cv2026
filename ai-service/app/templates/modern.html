@@ -5,10 +5,10 @@
 <style>
   @page {
     size: A4;
-    margin-top: 10mm;
-    margin-bottom: 12mm;
-    margin-left: 10mm;
-    margin-right: 10mm;
+    margin-top: 12mm;
+    margin-bottom: 14mm;
+    margin-left: 14mm;
+    margin-right: 14mm;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body {
@@ -18,363 +18,230 @@
     overflow: visible !important;
   }
   body {
-    font-family: 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-    font-size: 10pt;
-    line-height: 1.5;
-    color: #1e293b;
+    font-family: 'Lato', 'Inter', 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 9.5pt;
+    line-height: 1.35;
+    color: #111111;
     background: #ffffff;
   }
-  h1, h2, h3, .section-title, .main h2 {
-    page-break-after: avoid !important;
-    break-after: avoid !important;
-  }
-  .section-block, .section, .table-container {
-    page-break-inside: auto !important;
-    break-inside: auto !important;
-  }
-  .project-item, .exp-item {
-    page-break-inside: avoid !important;
-    break-inside: avoid !important;
-  }
-
-  .page {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  .header-card {
-    background: #0f172a;
-    color: #e2e8f0;
-    padding: 18px 20px;
-    border-radius: 6px;
-    margin-bottom: 14px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  .header-card .name {
-    font-size: 16pt;
-    font-weight: 800;
-    color: #ffffff;
-    margin-bottom: 2px;
-  }
-  .header-card .title {
+  h2 {
     font-size: 10pt;
-    color: #38bdf8;
-    font-weight: 600;
-    margin-bottom: 10px;
-  }
-  .contact-bar {
-    font-size: 9pt;
-    color: #cbd5e1;
-    margin-bottom: 8px;
-    line-height: 1.4;
-  }
-  .contact-bar span {
-    margin-right: 12px;
-  }
-  .skills-bar {
-    margin-top: 6px;
-  }
-  .skill-tag {
-    display: inline-block;
-    background: #1e293b;
-    color: #e2e8f0;
-    font-size: 8.5pt;
-    padding: 3px 8px;
-    border-radius: 4px;
-    margin: 2px 3px 2px 0;
-    border: 1px solid #334155;
-  }
-  .main {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-  .section {
-    margin-bottom: 14px;
-    page-break-inside: auto;
-    break-inside: auto;
-  }
-  .main h2 {
-    font-size: 11pt;
-    font-weight: 700;
-    color: #0f172a;
+    font-weight: 900;
+    color: #000000;
     text-transform: uppercase;
-    letter-spacing: 1.5px;
-    border-bottom: 2px solid #38bdf8;
-    padding-bottom: 3px;
-    margin-bottom: 8px;
-    margin-top: 14px;
+    letter-spacing: 1.2px;
+    border-bottom: 1.5px solid #000000;
+    padding-bottom: 1px;
+    margin-bottom: 4px;
+    margin-top: 10px;
     page-break-after: avoid;
     break-after: avoid;
   }
-  .main h2:first-of-type {
-    margin-top: 0;
-  }
-  .summary {
-    font-size: 9.5pt;
-    color: #475569;
-    margin-bottom: 4px;
-    text-align: justify;
-  }
-  .project-item, .exp-item {
-    margin-bottom: 8px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
+  h2:first-of-type { margin-top: 0; }
+  .section { margin-bottom: 8px; page-break-inside: auto; break-inside: auto; }
 
-  .project-name {
-    font-weight: 700;
-    font-size: 10pt;
-    color: #0f172a;
-  }
-  .project-role {
-    font-size: 9pt;
-    color: #38bdf8;
-    font-weight: 600;
-  }
-  .project-desc {
-    font-size: 9pt;
-    color: #475569;
-    margin-top: 2px;
-  }
-  .project-tech {
-    font-size: 8pt;
-    color: #64748b;
-    margin-top: 2px;
-  }
-  .exp-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-  }
-  .exp-company {
-    font-weight: 700;
-    font-size: 10pt;
-    color: #0f172a;
-  }
-  .exp-period {
-    font-size: 8.5pt;
-    color: #94a3b8;
-  }
-  .exp-role {
-    font-size: 9pt;
-    color: #475569;
-  }
-  .exp-desc {
-    font-size: 9pt;
-    color: #475569;
-    margin-top: 2px;
-  }
-  .cert-item {
-    font-size: 9pt;
-    color: #475569;
-    margin-bottom: 3px;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  .cert-name {
-    font-weight: 600;
-  }
-  .grade-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 9pt;
-    margin-top: 4px;
-    page-break-inside: auto;
-    break-inside: auto;
-  }
-  .grade-table tr {
-    page-break-inside: avoid;
-    break-inside: avoid;
-    page-break-after: auto;
-    break-after: auto;
-  }
-  .grade-table thead {
-    display: table-header-group;
-  }
-  .grade-table tfoot {
-    display: table-footer-group;
-  }
-  .grade-table th {
-    background: #f1f5f9;
-    color: #475569;
-    font-weight: 600;
-    padding: 4px 8px;
-    text-align: left;
-    border-bottom: 1px solid #e2e8f0;
-  }
-  .grade-table td {
-    padding: 3px 8px;
-    border-bottom: 1px solid #f1f5f9;
-    color: #334155;
-  }
-  .grade-table td:last-child {
-    text-align: center;
-  }
-  .grade-table td:nth-child(2) {
-    text-align: center;
-  }
-  .activity-item {
-    font-size: 9pt;
-    color: #475569;
-    margin-bottom: 3px;
-    padding-left: 12px;
-    position: relative;
-    page-break-inside: avoid;
-    break-inside: avoid;
-  }
-  .activity-item::before {
-    content: "▸";
-    position: absolute;
-    left: 0;
-    color: #38bdf8;
-  }
-  .language-item {
-    font-size: 9pt;
-    color: #475569;
-    margin-bottom: 4px;
-  }
+  /* Header */
+  .header { border-bottom: 1.5px solid #000000; padding-bottom: 6px; margin-bottom: 10px; }
+  .header-row { display: flex; justify-content: space-between; align-items: baseline; margin-top: 1px; }
+  .header-name { font-size: 14pt; font-weight: 800; color: #000000; text-transform: uppercase; }
+  .header-info { font-size: 9pt; color: #222222; font-weight: 600; }
+  .header-info-light { font-size: 9pt; color: #333333; }
+
+  /* Education */
+  .edu-item { margin-bottom: 4px; page-break-inside: avoid; break-inside: avoid; }
+  .edu-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .edu-school { font-weight: 700; font-size: 9.5pt; color: #000000; }
+  .edu-period { font-size: 9pt; color: #444444; font-weight: 600; }
+  .edu-detail { display: flex; justify-content: space-between; align-items: baseline; margin-top: 1px; font-size: 9pt; color: #222222; }
+  .edu-gpa { font-weight: 700; color: #000000; }
+
+  /* Summary */
+  .summary { font-size: 9pt; color: #222222; line-height: 1.35; }
+
+  /* Skills */
+  .skill-line { font-size: 9pt; color: #111111; line-height: 1.35; margin-bottom: 2px; }
+  .skill-line strong { color: #000000; font-weight: 700; }
+
+  /* Projects */
+  .project-item { margin-bottom: 6px; page-break-inside: avoid; break-inside: avoid; }
+  .project-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .project-name { font-weight: 700; font-size: 9.5pt; color: #000000; }
+  .project-period { font-size: 8.5pt; color: #444444; font-weight: 600; white-space: nowrap; }
+  .project-tech { font-size: 8.5pt; color: #333333; margin-top: 1px; }
+  .project-role { font-size: 8.5pt; color: #333333; margin-top: 1px; }
+  .project-desc { font-size: 8.5pt; color: #222222; margin-top: 2px; line-height: 1.4; }
+  .project-desc li { margin-bottom: 1px; padding-left: 4px; }
+
+  /* Experience */
+  .exp-item { margin-bottom: 4px; page-break-inside: avoid; break-inside: avoid; }
+  .exp-header { display: flex; justify-content: space-between; align-items: baseline; }
+  .exp-company { font-weight: 700; font-size: 9.5pt; color: #000000; }
+  .exp-period { font-size: 8.5pt; color: #555555; font-weight: 600; }
+  .exp-role { font-size: 9pt; color: #111111; font-weight: 600; }
+  .exp-desc { font-size: 8.5pt; color: #222222; margin-top: 2px; line-height: 1.35; }
+
+  /* Certifications & Languages */
+  .cert-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px; }
+  .cert-tag { background: #F1F5F9; color: #0F172A; padding: 2px 6px; border-radius: 3px; font-size: 8.5pt; font-weight: 500; border: 1px solid #CBD5E1; }
+
+  /* Activities */
+  .activity-item { font-size: 8.5pt; color: #222222; margin-bottom: 1px; line-height: 1.35; }
 </style>
 </head>
 <body>
-<div class="page">
-  <div class="header-card">
-    <div style="display: flex; justify-content: space-between; align-items: baseline;">
-      <span class="name">{{ profile.fullName }}</span>
-      {% if profile.phoneNumber %}<span style="font-size:9pt; color:#cbd5e1;">{{ profile.phoneNumber }}</span>{% endif %}
-    </div>
-    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
-      <span style="font-size:9pt; color:#38bdf8; font-weight:600;">{% if profile.studentCode %}Mã SV: {{ profile.studentCode }}{% endif %}</span>
-      {% if profile.email %}<span style="font-size:9pt; color:#e2e8f0;">{{ profile.email }}</span>{% endif %}
-    </div>
-    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
-      <span style="font-size:9pt; color:#cbd5e1;">Ngành: {{ profile.major }}{% if profile.faculty %} • Khoa: {{ profile.faculty }}{% endif %}</span>
-    </div>
-    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
-      <span style="font-size:9pt; font-weight:700; color:#ffffff;">Trường Cao đẳng Tây Đô</span>
-    </div>
-  </div>
 
-  <div class="main">
-    <div class="section">
-      <h2>Học vấn / Education</h2>
-      {% if education and education|length > 0 %}
-        {% for edu in education %}
-        <div class="exp-item">
-          <div class="exp-header">
-            <span class="exp-company">• {{ edu.school }}</span>
-            {% if edu.period %}<span class="exp-period">{{ edu.period }}</span>{% endif %}
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 9pt; color: #475569; margin-top: 2px;">
-            <span>Chuyên ngành: {{ edu.major }}{% if edu.degree %} [{{ edu.degree }}]{% endif %}</span>
-            {% if edu.gpa %}
-            <span><strong>GPA:</strong> {{ edu.gpa }}</span>
-            {% endif %}
-          </div>
-        </div>
-        {% endfor %}
-      {% else %}
-        <div class="exp-item">
-          <div class="exp-header">
-            <span class="exp-company">• Trường Cao đẳng Tây Đô</span>
-            {% if profile.academicYear %}<span class="exp-period">{{ profile.academicYear }}</span>{% endif %}
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 9pt; color: #475569; margin-top: 2px;">
-            <span>Chuyên ngành: {{ profile.major }}{% if profile.faculty %} ({{ profile.faculty }}){% endif %}</span>
-            {% if profile.gpa and profile.gpa > 0 %}
-            <span><strong>GPA:</strong> {{ "%.2f"|format(profile.gpa) }} / 4.0</span>
-            {% endif %}
-          </div>
-        </div>
+<!-- Header -->
+<div class="header">
+  <div class="header-row">
+    <span class="header-name">{{ profile.fullName }}</span>
+    {% if profile.phoneNumber %}<span class="header-info">{{ profile.phoneNumber }}</span>{% endif %}
+  </div>
+  <div class="header-row">
+    <span class="header-info">{% if profile.studentCode %}Mã SV: {{ profile.studentCode }}{% endif %}</span>
+    {% if profile.email %}<span class="header-info-light">{{ profile.email }}</span>{% endif %}
+  </div>
+  {% if profile.major or profile.faculty %}
+  <div class="header-row">
+    <span class="header-info-light">Ngành: {{ profile.major }}{% if profile.faculty %} • Khoa: {{ profile.faculty }}{% endif %}</span>
+  </div>
+  {% endif %}
+  <div class="header-row">
+    <span class="header-info" style="font-weight:700;">Trường Cao đẳng Tây Đô</span>
+  </div>
+</div>
+
+<!-- Education -->
+<div class="section">
+  <h2>HỌC VẤN / EDUCATION</h2>
+  {% if education and education|length > 0 %}
+    {% for edu in education %}
+    <div class="edu-item">
+      <div class="edu-header">
+        <span class="edu-school">• {{ edu.school }}</span>
+        {% if edu.period %}<span class="edu-period">{{ edu.period }}</span>{% endif %}
+      </div>
+      <div class="edu-detail">
+        <span>Chuyên ngành: {{ edu.major }}{% if edu.degree %} [{{ edu.degree }}]{% endif %}</span>
+        {% if edu.gpa %}<span class="edu-gpa">GPA: {{ edu.gpa }}</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="edu-item">
+      <div class="edu-header">
+        <span class="edu-school">• Trường Cao đẳng Tây Đô</span>
+        {% if profile.academicYear %}<span class="edu-period">{{ profile.academicYear }}</span>{% endif %}
+      </div>
+      <div class="edu-detail">
+        <span>Chuyên ngành: {{ profile.major }}{% if profile.faculty %} ({{ profile.faculty }}){% endif %}</span>
+        {% if profile.gpa and profile.gpa > 0 %}<span class="edu-gpa">GPA: {{ "%.2f"|format(profile.gpa) }}</span>{% endif %}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Summary -->
+{% if summary %}
+<div class="section">
+  <h2>GIỚI THIỆU BẢN THÂN</h2>
+  <p class="summary">{{ summary }}</p>
+</div>
+{% endif %}
+
+<!-- Skills -->
+{% if categorized_skills %}
+<div class="section">
+  <h2>KỸ NĂNG & CÔNG NGHỆ</h2>
+  {% for group in categorized_skills %}
+  <div class="skill-line"><strong>• {{ group.category }}:</strong> {{ group.items | join(", ") }}.</div>
+  {% endfor %}
+</div>
+{% elif skills %}
+<div class="section">
+  <h2>KỸ NĂNG & CÔNG NGHỆ</h2>
+  {% for skill in skills %}
+  <div class="skill-line">• {{ skill }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- Projects -->
+{% if projects %}
+<div class="section">
+  <h2>DỰ ÁN CÁ NHÂN</h2>
+  {% for p in projects %}
+  <div class="project-item">
+    <div class="project-header">
+      <span class="project-name">{{ p.name }}</span>
+      {% if p.startDate %}
+      <span class="project-period">
+        {{ p.startDate[5:7] }}/{{ p.startDate[0:4] }} - {% if p.endDate %}{{ p.endDate[5:7] }}/{{ p.endDate[0:4] }}{% else %}now{% endif %}
+      </span>
       {% endif %}
     </div>
-
-
-    {% if summary %}
-    <div class="section">
-      <h2>Giới thiệu</h2>
-      <p class="summary">{{ summary }}</p>
+    {% if p.technologies %}
+    <div class="project-tech">
+      {% for tech in p.technologies %}{% if not loop.first %}, {% endif %}{{ tech }}{% endfor %}
     </div>
     {% endif %}
-
-    {% if skills %}
-    <div class="section">
-      <h2>Kỹ năng & Công nghệ</h2>
-      <div style="margin-top: 4px;">
-        {% for skill in skills %}
-        <span class="skill-tag" style="background:#f1f5f9;color:#0f172a;border:1px solid #cbd5e1;">{{ skill }}</span>
-        {% endfor %}
-      </div>
-    </div>
+    {% if p.role %}
+    <div class="project-role">{{ p.role }}</div>
     {% endif %}
-
-    {% if projects %}
-    <div class="section">
-      <h2>Dự án / Projects</h2>
-      {% for p in projects %}
-      <div class="project-item">
-        <div style="display: flex; justify-content: space-between; align-items: baseline;">
-          <span class="project-name">• {{ p.name }}</span>
-          {% if p.startDate %}
-          <span style="font-size: 8.5pt; color: #64748b; font-weight: 600;">
-            {{ p.startDate[5:7] }}/{{ p.startDate[0:4] }} - {% if p.endDate %}{{ p.endDate[5:7] }}/{{ p.endDate[0:4] }}{% else %}now{% endif %}
-          </span>
-          {% endif %}
-        </div>
-        {% if p.technologies %}
-        <div class="project-tech">
-          <strong>Công nghệ & Công cụ:</strong>
-          {% for tech in p.technologies %}
-          <span class="skill-tag" style="background:#f1f5f9;color:#475569;border:1px solid #e2e8f0;">{{ tech }}</span>
-          {% endfor %}
-        </div>
-        {% endif %}
-        {% if p.role %}
-        <div class="project-role">Vai trò: {{ p.role }}</div>
-        {% endif %}
-        {% if p.description %}
-        <div class="project-desc">• {{ p.description }}</div>
-        {% endif %}
-      </div>
+    {% if p.description %}
+    <div class="project-desc">
+      {% for line in p.description.split('\n') %}
+        {% if line.strip() %}<div style="padding-left:12px;position:relative;margin-bottom:1px;"><span style="position:absolute;left:0;color:#444;">•</span>{{ line.strip() }}</div>{% endif %}
       {% endfor %}
     </div>
     {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
 
-
-    {% if experience %}
-    <h2>Kinh nghiệm</h2>
-    {% for e in experience %}
-    <div class="exp-item">
-      <div class="exp-header">
-        <span class="exp-company">{{ e.company }}</span>
-        <span class="exp-period">{{ e.period }}</span>
-      </div>
-      <div class="exp-role">{{ e.role }}</div>
-      {% if e.description %}
-      <div class="exp-desc">{{ e.description }}</div>
-      {% endif %}
+<!-- Experience -->
+{% if experience %}
+<div class="section">
+  <h2>KINH NGHIỆM LÀM VIỆC & THỰC TẬP</h2>
+  {% for e in experience %}
+  <div class="exp-item">
+    <div class="exp-header">
+      <span class="exp-company">• {{ e.company }}</span>
+      {% if e.period %}<span class="exp-period">{{ e.period }}</span>{% endif %}
     </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if certifications %}
-    <h2>Chứng chỉ</h2>
-    {% for c in certifications %}
-    <div class="cert-item">
-      <span class="cert-name">{{ c.certificationName }}</span>
-      {% if c.date %} — {{ c.date }}{% endif %}
-    </div>
-    {% endfor %}
-    {% endif %}
-
-    {% if activities %}
-    <h2>Hoạt động</h2>
-    {% for a in activities %}
-    <div class="activity-item">{{ a }}</div>
-    {% endfor %}
+    <div class="exp-role">{{ e.role }}</div>
+    {% if e.description %}
+    <div class="exp-desc">{{ e.description }}</div>
     {% endif %}
   </div>
+  {% endfor %}
 </div>
+{% endif %}
+
+<!-- Certifications & Languages -->
+{% if certifications or languages %}
+<div class="section">
+  <h2>CHỨNG CHỈ & NGOẠI NGỮ</h2>
+  <div class="cert-tags">
+    {% for lang in languages %}
+    <span class="cert-tag">{{ lang }}</span>
+    {% endfor %}
+    {% for c in certifications %}
+    <span class="cert-tag">{{ c.certificationName }}{% if c.date %} ({{ c.date }}){% endif %}</span>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Activities -->
+{% if activities %}
+<div class="section">
+  <h2>HOẠT ĐỘNG NGOẠI KHÓA</h2>
+  {% for a in activities %}
+  <div class="activity-item">• {{ a }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
 </body>
 </html>

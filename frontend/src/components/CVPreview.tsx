@@ -6,6 +6,7 @@ interface CVPreviewProps {
   cvData: CVData;
   selectedGrades: string[];
   children?: React.ReactNode;
+  cvLang?: "vi" | "en";
 }
 
 export interface PageSectionItem {
@@ -113,11 +114,10 @@ const CVContent: React.FC<{
   cvData: CVData;
   selectedGrades: string[];
   pageConfig?: PageContent;
-}> = ({ cvData, selectedGrades, pageConfig }) => {
+  cvLang?: "vi" | "en";
+}> = ({ cvData, selectedGrades: _selectedGrades, pageConfig, cvLang = "vi" }) => {
+  const isEn = cvLang === "en";
   const formattedSkillGroups = getFormattedSkillGroups(cvData);
-  const filteredGrades = (cvData.grades || []).filter((g) =>
-    selectedGrades.includes(g.subjectName),
-  );
 
   const getSecConfig = (key: string) => {
     if (!pageConfig)
@@ -187,7 +187,7 @@ const CVContent: React.FC<{
               style={{ fontSize: "0.76rem", color: "#333333", fontWeight: 600 }}
             >
               {cvData.profile.studentCode
-                ? `Mã SV: ${cvData.profile.studentCode}`
+                ? `${isEn ? "Student ID: " : "Mã SV: "}${cvData.profile.studentCode}`
                 : ""}
             </span>
             {cvData.profile.email && (
@@ -214,9 +214,10 @@ const CVContent: React.FC<{
                   fontWeight: 600,
                 }}
               >
-                Ngành: {cvData.profile.major}{" "}
+                {isEn ? "Major: " : "Ngành: "}
+                {cvData.profile.major}{" "}
                 {cvData.profile.faculty
-                  ? `• Khoa: ${cvData.profile.faculty}`
+                  ? `• ${isEn ? "Faculty: " : "Khoa: "}${cvData.profile.faculty}`
                   : ""}
               </span>
             </div>
@@ -234,7 +235,7 @@ const CVContent: React.FC<{
             <span
               style={{ fontSize: "0.76rem", color: "#111111", fontWeight: 700 }}
             >
-              Trường Cao đẳng Tây Đô
+              {isEn ? "Tay Do College" : "Trường Cao đẳng Tây Đô"}
             </span>
           </div>
         </div>
@@ -244,24 +245,26 @@ const CVContent: React.FC<{
       {getSecConfig("education").exists && (
         <div className="cv-pdf-section" data-section-key="education">
           {getSecConfig("education").showTitle && (
-            <div className="cv-pdf-section-title">HỌC VẤN / EDUCATION</div>
+            <div className="cv-pdf-section-title">{isEn ? "EDUCATION" : "HỌC VẤN / EDUCATION"}</div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {(cvData.education && cvData.education.length > 0
               ? cvData.education
               : [
                   {
-                    school: "Trường Cao đẳng Tây Đô",
+                    school: isEn ? "Tay Do College" : "Trường Cao đẳng Tây Đô",
                     major: cvData.profile.major
                       ? `${cvData.profile.major}${
                           cvData.profile.faculty
                             ? ` (${cvData.profile.faculty})`
                             : ""
                         }`
+                      : isEn
+                      ? "Software Engineering"
                       : "Kỹ thuật Phần mềm",
                     period: cvData.profile.academicYear || "",
                     gpa: cvData.profile.gpa > 0 ? cvData.profile.gpa : undefined,
-                    degree: "Cao đẳng",
+                    degree: isEn ? "College" : "Cao đẳng",
                   },
                 ]
             ).map((edu, idx) => {
@@ -306,7 +309,8 @@ const CVContent: React.FC<{
                     }}
                   >
                     <span style={{ fontSize: "0.75rem", color: "#222222" }}>
-                      Chuyên ngành: {edu.major}{" "}
+                      {isEn ? "Major: " : "Chuyên ngành: "}
+                      {edu.major}{" "}
                       {edu.degree ? `[${edu.degree}]` : ""}
                     </span>
                     {edu.gpa && (
@@ -336,7 +340,7 @@ const CVContent: React.FC<{
       {cvData.summary && getSecConfig("summary").exists && (
         <div className="cv-pdf-section" data-section-key="summary">
           {getSecConfig("summary").showTitle && (
-            <div className="cv-pdf-section-title">Giới thiệu bản thân</div>
+            <div className="cv-pdf-section-title">{isEn ? "SUMMARY" : "GIỚI THIỆU BẢN THÂN"}</div>
           )}
           <p
             data-item-idx={0}
@@ -357,7 +361,9 @@ const CVContent: React.FC<{
         getSecConfig("competences").exists && (
           <div className="cv-pdf-section" data-section-key="competences">
             {getSecConfig("competences").showTitle && (
-              <div className="cv-pdf-section-title">KỸ NĂNG & CÔNG NGHỆ</div>
+              <div className="cv-pdf-section-title">
+                {isEn ? "SKILLS & TECHNOLOGIES" : "KỸ NĂNG & CÔNG NGHỆ"}
+              </div>
             )}
             <div
               style={{
@@ -392,13 +398,13 @@ const CVContent: React.FC<{
           </div>
         )}
 
-      {/* 4. Projects (IIIT Vadodara Overleaf Reference Style) */}
+      {/* 4. Projects */}
       {cvData.projects &&
         cvData.projects.length > 0 &&
         getSecConfig("projects").exists && (
           <div className="cv-pdf-section" data-section-key="projects">
             {getSecConfig("projects").showTitle && (
-              <div className="cv-pdf-section-title">DỰ ÁN CÁ NHÂN</div>
+              <div className="cv-pdf-section-title">{isEn ? "PERSONAL PROJECTS" : "DỰ ÁN CÁ NHÂN"}</div>
             )}
             <div className="cv-pdf-grid">
               {cvData.projects.map((proj, idx) => {
@@ -409,6 +415,9 @@ const CVContent: React.FC<{
                   proj.startDate,
                   proj.endDate,
                 );
+                const descLines = proj.description
+                  ? proj.description.split(/\n|(?<=\.)\s+/).filter((l) => l.trim())
+                  : [];
                 return (
                   <div
                     key={idx}
@@ -425,7 +434,7 @@ const CVContent: React.FC<{
                       }}
                     >
                       <span className="cv-pdf-project-title">
-                        • {proj.name}
+                        {proj.name}
                       </span>
                       {periodStr && (
                         <span
@@ -440,16 +449,15 @@ const CVContent: React.FC<{
                         </span>
                       )}
                     </div>
-                    {/* Row 2: Technologies */}
+                    {/* Row 2: Technologies as inline tags */}
                     {proj.technologies && proj.technologies.length > 0 && (
                       <div
                         style={{
-                          fontSize: "0.74rem",
+                          fontSize: "0.73rem",
                           color: "#333333",
                           marginTop: "2px",
                         }}
                       >
-                        <strong>Công nghệ & Công cụ:</strong>{" "}
                         {Array.isArray(proj.technologies)
                           ? proj.technologies.join(", ")
                           : proj.technologies}
@@ -460,25 +468,29 @@ const CVContent: React.FC<{
                       <div
                         style={{
                           fontSize: "0.73rem",
-                          color: "#444444",
+                          color: "#333333",
                           marginTop: "1px",
-                          fontStyle: "italic",
                         }}
                       >
-                        Vai trò: {proj.role}
+                        {proj.role}
                       </div>
                     )}
-                    {/* Row 4: Description */}
-                    {proj.description && (
+                    {/* Row 4: Description as bullet points */}
+                    {descLines.length > 0 && (
                       <div
                         style={{
                           fontSize: "0.73rem",
                           color: "#222222",
                           marginTop: "2px",
-                          lineHeight: "1.35",
+                          lineHeight: "1.4",
                         }}
                       >
-                        • {proj.description}
+                        {descLines.map((line, li) => (
+                          <div key={li} style={{ paddingLeft: "12px", position: "relative", marginBottom: "1px" }}>
+                            <span style={{ position: "absolute", left: 0, color: "#444" }}>•</span>
+                            {line.trim()}
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -495,7 +507,7 @@ const CVContent: React.FC<{
           <div className="cv-pdf-section" data-section-key="experience">
             {getSecConfig("experience").showTitle && (
               <div className="cv-pdf-section-title">
-                KINH NGHIỆM LÀM VIỆC & THỰC TẬP
+                {isEn ? "WORK EXPERIENCE & INTERNSHIPS" : "KINH NGHIỆM LÀM VIỆC & THỰC TẬP"}
               </div>
             )}
             <div
@@ -549,10 +561,7 @@ const CVContent: React.FC<{
                         fontWeight: 600,
                       }}
                     >
-                      {exp.role}{" "}
-                      {exp.verificationStatus === 1 && (
-                        <span className="cv-verified-chip">✓ Đã xác thực</span>
-                      )}
+                      {exp.role}
                     </div>
                     {exp.description && (
                       <div
@@ -573,30 +582,12 @@ const CVContent: React.FC<{
           </div>
         )}
 
-      {/* 6. Languages */}
-      {cvData.languages &&
-        cvData.languages.length > 0 &&
-        getSecConfig("languages").exists && (
-          <div className="cv-pdf-section" data-section-key="languages">
-            {getSecConfig("languages").showTitle && (
-              <div className="cv-pdf-section-title">Ngoại ngữ</div>
-            )}
-            <div
-              data-item-idx={0}
-              style={{ fontSize: "0.75rem", color: "#111111" }}
-            >
-              {cvData.languages.join(" • ")}
-            </div>
-          </div>
-        )}
-
-      {/* 7. Certifications */}
-      {cvData.certifications &&
-        cvData.certifications.length > 0 &&
+      {/* 6. Certifications & Languages (merged) */}
+      {(cvData.languages?.length > 0 || cvData.certifications?.length > 0) &&
         getSecConfig("certifications").exists && (
           <div className="cv-pdf-section" data-section-key="certifications">
             {getSecConfig("certifications").showTitle && (
-              <div className="cv-pdf-section-title">Chứng chỉ & Bằng cấp</div>
+              <div className="cv-pdf-section-title">{isEn ? "CERTIFICATIONS & LANGUAGES" : "CHỨNG CHỈ & NGOẠI NGỮ"}</div>
             )}
             <div
               data-item-idx={0}
@@ -607,8 +598,13 @@ const CVContent: React.FC<{
                 marginTop: "2px",
               }}
             >
-              {cvData.certifications.map((cert, idx) => (
-                <span key={idx} className="cv-tag">
+              {cvData.languages?.map((lang, idx) => (
+                <span key={`lang-${idx}`} className="cv-tag">
+                  {lang}
+                </span>
+              ))}
+              {cvData.certifications?.map((cert, idx) => (
+                <span key={`cert-${idx}`} className="cv-tag">
                   {cert.certificationName} {cert.date ? `(${cert.date})` : ""}
                 </span>
               ))}
@@ -616,47 +612,13 @@ const CVContent: React.FC<{
           </div>
         )}
 
-      {/* 8. Academic Results */}
-      {filteredGrades.length > 0 && getSecConfig("grades").exists && (
-        <div className="cv-pdf-section" data-section-key="grades">
-          {getSecConfig("grades").showTitle && (
-            <div className="cv-pdf-section-title" style={{ breakAfter: "avoid", pageBreakAfter: "avoid" }}>
-              Kết quả môn học tiêu biểu (Xác thực CSDL Tây Đô)
-            </div>
-          )}
-          <div className="cv-grade-grid" style={{ marginTop: "2px" }}>
-
-            {filteredGrades.map((grade, idx) => {
-              const sec = getSecConfig("grades");
-              if (sec.itemIndices && !sec.itemIndices.includes(idx))
-                return null;
-              return (
-                <div
-                  key={grade.subjectName}
-                  className="cv-grade-item"
-                  data-item-idx={idx}
-                >
-                  <span>{grade.subjectName}</span>
-                  <strong>
-                    {typeof grade.score === "number"
-                      ? grade.score.toFixed(1)
-                      : grade.score}{" "}
-                    / 10
-                  </strong>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* 9. Extracurricular Activities */}
+      {/* 7. Extracurricular Activities */}
       {cvData.activities &&
         cvData.activities.length > 0 &&
         getSecConfig("activities").exists && (
           <div className="cv-pdf-section" data-section-key="activities">
             {getSecConfig("activities").showTitle && (
-              <div className="cv-pdf-section-title">Hoạt động ngoại khóa</div>
+              <div className="cv-pdf-section-title">{isEn ? "EXTRACURRICULAR ACTIVITIES" : "HOẠT ĐỘNG NGOẠI KHÓA"}</div>
             )}
             <div
               style={{
@@ -706,6 +668,7 @@ export const CVPreview: React.FC<CVPreviewProps> = ({
   cvData,
   selectedGrades,
   children,
+  cvLang = "vi",
 }) => {
   const measureRef = useRef<HTMLDivElement>(null);
   const [pages, setPages] = useState<PageContent[]>([
@@ -797,8 +760,9 @@ export const CVPreview: React.FC<CVPreviewProps> = ({
         const titleAndItemHeight = titleEl
           ? getUnscaledSpanHeight(titleEl, itemEl)
           : getUnscaledOuterHeight(itemEl);
+        // For subsequent items, use bottom-to-bottom distance to avoid double-counting
         const itemHeight = previousItemEl
-          ? getUnscaledSpanHeight(previousItemEl, itemEl)
+          ? (itemEl.getBoundingClientRect().bottom - previousItemEl.getBoundingClientRect().bottom)
           : titleAndItemHeight;
         const marginAfterItem =
           idx === itemEls.length - 1 ? sectionMarginBottom : 0;
@@ -870,7 +834,7 @@ export const CVPreview: React.FC<CVPreviewProps> = ({
 
   useLayoutEffect(() => {
     calculatePagination();
-  }, [cvData, selectedGrades, children]);
+  }, [cvData, selectedGrades, children, cvLang]);
 
   useEffect(() => {
     let isMounted = true;
@@ -896,7 +860,7 @@ export const CVPreview: React.FC<CVPreviewProps> = ({
           style={{ display: "block" }}
         >
           {children || (
-            <CVContent cvData={cvData} selectedGrades={selectedGrades} />
+            <CVContent cvData={cvData} selectedGrades={selectedGrades} cvLang={cvLang} />
           )}
         </div>
       </div>
@@ -911,6 +875,7 @@ export const CVPreview: React.FC<CVPreviewProps> = ({
                   cvData={cvData}
                   selectedGrades={selectedGrades}
                   pageConfig={pageConfig}
+                  cvLang={cvLang}
                 />
               </div>
             </div>

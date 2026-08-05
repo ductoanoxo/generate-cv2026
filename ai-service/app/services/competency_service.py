@@ -285,17 +285,20 @@ class CompetencyService:
             required_skills = [s.strip() for s in required_skills.split(",") if s.strip()]
 
         # Process selected courses & annotate matched skills
+        # Chỉ giữ các môn học có điểm >= GOOD_GRADE_THRESHOLD (7.0) để đưa vào CV
         processed_courses = []
         for course in selected_courses:
+            grade = float(course.get("grade") or course.get("combinedResult") or 0)
+            if grade < GOOD_GRADE_THRESHOLD:
+                continue
+
             course_text = (
                 f"{course.get('course_name', '')} "
                 f"{course.get('course_description', '')} "
                 f"{' '.join(course.get('clos', []))}"
             )
-            grade = float(course.get("grade") or course.get("combinedResult") or 0)
             matched_skills = (
                 self._match_skills_for_item(required_skills, course_text)
-                if grade >= GOOD_GRADE_THRESHOLD else []
             )
 
             c_dict = {
