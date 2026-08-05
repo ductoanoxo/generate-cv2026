@@ -1854,6 +1854,30 @@ export const CVBuilder: React.FC = () => {
               onRemoveEducation={handleRemoveEducation}
             />
 
+            {/* Section 4.5: EducationForm Component */}
+            <EducationForm
+              education={
+                cvData.education && cvData.education.length > 0
+                  ? cvData.education
+                  : [
+                      {
+                        school: "Trường Cao đẳng Tây Đô",
+                        major: cvData.profile.major
+                          ? `${cvData.profile.major}${
+                              cvData.profile.faculty ? ` (${cvData.profile.faculty})` : ""
+                            }`
+                          : "Kỹ thuật Phần mềm",
+                        period: cvData.profile.academicYear || "",
+                        gpa: cvData.profile.gpa > 0 ? cvData.profile.gpa : undefined,
+                        degree: "Cao đẳng",
+                      },
+                    ]
+              }
+              onAddEducation={handleAddEducation}
+              onUpdateEducation={handleUpdateEducation}
+              onRemoveEducation={handleRemoveEducation}
+            />
+
             {/* Section 5: ProjectForm Component */}
             <ProjectForm
 

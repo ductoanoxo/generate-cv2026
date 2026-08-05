@@ -234,6 +234,49 @@
     <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
       <span style="font-size:10pt; font-weight:700; color:#1a1a1a;">Trường Cao đẳng Tây Đô</span>
     </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:10pt; color:#555; font-weight:600;">{% if profile.studentCode %}Mã SV: {{ profile.studentCode }}{% endif %}</span>
+      {% if profile.email %}<span style="font-size:10pt; color:#555;">{{ profile.email }}</span>{% endif %}
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:10pt; color:#555;">Ngành: {{ profile.major }}{% if profile.faculty %} • Khoa: {{ profile.faculty }}{% endif %}</span>
+    </div>
+    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-top: 2px;">
+      <span style="font-size:10pt; font-weight:700; color:#1a1a1a;">Trường Cao đẳng Tây Đô</span>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Học vấn / Education</div>
+    {% if education and education|length > 0 %}
+      {% for edu in education %}
+      <div class="exp-item">
+        <div class="exp-header">
+          <span class="exp-company">• {{ edu.school }}</span>
+          {% if edu.period %}<span class="exp-period">{{ edu.period }}</span>{% endif %}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10pt; color: #444; margin-top: 2px;">
+          <span>Chuyên ngành: {{ edu.major }}{% if edu.degree %} [{{ edu.degree }}]{% endif %}</span>
+          {% if edu.gpa %}
+          <span><strong>GPA:</strong> {{ edu.gpa }}</span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="exp-item">
+        <div class="exp-header">
+          <span class="exp-company">• Trường Cao đẳng Tây Đô</span>
+          {% if profile.academicYear %}<span class="exp-period">{{ profile.academicYear }}</span>{% endif %}
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: baseline; font-size: 10pt; color: #444; margin-top: 2px;">
+          <span>Chuyên ngành: {{ profile.major }}{% if profile.faculty %} ({{ profile.faculty }}){% endif %}</span>
+          {% if profile.gpa and profile.gpa > 0 %}
+          <span><strong>GPA:</strong> {{ "%.2f"|format(profile.gpa) }} / 4.0</span>
+          {% endif %}
+        </div>
+      </div>
+    {% endif %}
   </div>
 
   <div class="section">
