@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.config import settings
-from app.routers import health, parse_jd, embed, search, scrape_github, cv, export
+from app.routers import health, parse_jd, embed, search, scrape_github, cv, export, translate
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -28,6 +28,7 @@ app.include_router(search.router)
 app.include_router(scrape_github.router)
 app.include_router(export.router)
 app.include_router(cv.router)
+app.include_router(translate.router)
 
 
 @app.get("/")

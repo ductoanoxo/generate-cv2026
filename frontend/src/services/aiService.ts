@@ -211,6 +211,27 @@ export const exportCVPdf = async (cvData: CVData) => {
   return response.data as Blob;
 };
 
+export const translateCvData = async (cvData: CVData): Promise<CVData> => {
+  const response = await aiClient.post('/api/translate/cv', cvData);
+  return response.data as CVData;
+};
+
+export interface AutoOptimizeResult {
+  optimized_cv: CVData;
+  recommendations: string[];
+}
+
+export const autoOptimizeCv = async (
+  cvData: CVData,
+  jdText: string,
+): Promise<AutoOptimizeResult> => {
+  const response = await aiClient.post('/api/auto-optimize', {
+    cv_data: cvData,
+    jd_text: jdText,
+  });
+  return response.data as AutoOptimizeResult;
+};
+
 const formatBirthDateForDocx = (value?: string): string => {
   if (!value) return '';
   const iso = value.slice(0, 10);

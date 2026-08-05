@@ -16,12 +16,55 @@ jinja_env = Environment(loader=FileSystemLoader(TEMPLATE_DIR))
 
 class ExportService:
 
+    _CATEGORY_KEYWORDS = {
+        "Domain Knowledge": ["banking", "thought machine", "symbols", "exchange", "fx", "accounting", "custody", "laundering", "aml", "compliance"],
+        "Business Skills": ["crm", "lark", "erp", "odoo", "business"],
+        "Databases & Data Management": ["sql", "db", "database", "mongo", "postgres", "redis", "oracle"],
+        "DevOps, Tools & Monitoring": ["docker", "git", "ci/cd", "kubernetes", "linux", "aws", "prometheus", "grafana", "figma", "draw.io", "tool", "monitoring", "alert"],
+        "Soft Skills & Methodologies": ["teamwork", "communication", "scrum", "agile", "giao tiếp", "tự học", "giải quyết", "thích ứng", "collaboration", "troubleshooting"],
+    }
+
     def __init__(self):
         self.template_dir = TEMPLATE_DIR
 
+    @staticmethod
+    def _build_categorized_skills(skills: list[str]) -> list[dict]:
+        categories: dict[str, list[str]] = {
+            "Backend & Programming Skills": [],
+            "Databases & Data Management": [],
+            "Domain Knowledge": [],
+            "DevOps, Tools & Monitoring": [],
+            "Business Skills": [],
+            "Soft Skills & Methodologies": [],
+        }
+        cat_kw = ExportService._CATEGORY_KEYWORDS
+        for skill in skills:
+            s_lower = skill.lower()
+            placed = False
+            for cat, keywords in cat_kw.items():
+                if any(kw in s_lower for kw in keywords):
+                    categories[cat].append(skill)
+                    placed = True
+                    break
+            if not placed:
+                categories["Backend & Programming Skills"].append(skill)
+        return [{"category": cat, "items": items} for cat, items in categories.items() if items]
+
     def _render_html(self, cv_data: dict, template_name: str = "modern") -> str:
         template = jinja_env.get_template(f"{template_name}.html")
-        return template.render(**cv_data)
+        skills = cv_data.get("skills") or []
+        ctx = dict(cv_data)
+        
+        frontend_categorized = cv_data.get("categorizedSkills") or cv_data.get("categorized_skills")
+        if frontend_categorized:
+            ctx["categorized_skills"] = [
+                {"category": g.get("category"), "items": g.get("items")}
+                for g in frontend_categorized if g.get("items")
+            ]
+        else:
+            ctx["categorized_skills"] = self._build_categorized_skills(skills)
+            
+        return template.render(**ctx)
 
     def generate_pdf(self, cv_data: dict, template_name: str = "modern") -> bytes:
         html = self._render_html(cv_data, template_name)

@@ -11,10 +11,12 @@ import { ATSScoreBadge } from "../../components/ATSScoreBadge";
 import { ValidationReport } from "../../components/ValidationReport";
 import { buildATSReport } from "../../utils/cvValidation";
 import {
+  autoOptimizeCv,
   exportCVPdf,
   exportMau07Docx,
   generateCVFullPipeline,
   parseJobDescription,
+  translateCvData,
 } from "../../services/aiService";
 import {
   getMyVerifications,
@@ -40,7 +42,6 @@ import {
   Trash,
   Check,
   User,
-  GraduationCap,
   Sparkle,
   Target,
   ArrowRight,
@@ -49,6 +50,7 @@ import {
   MagnifyingGlassPlus,
   MagnifyingGlassMinus,
   CornersOut,
+  Copy,
 } from "@phosphor-icons/react";
 
 interface SavedCVSummary {
@@ -159,6 +161,43 @@ const extractJobTitleFromJD = (jdText: string): string => {
   return "Kỹ sư CNTT";
 };
 
+const OptimizeDiffBlock: React.FC<{
+  label: string;
+  oldValue: string;
+  newValue: string;
+}> = ({ label, oldValue, newValue }) => {
+  if (oldValue === newValue) return null;
+  return (
+    <div style={{ marginBottom: "14px" }}>
+      <strong style={{ color: "#E2E8F0", fontSize: "0.85rem" }}>{label}</strong>
+      <div
+        style={{
+          marginTop: "6px",
+          background: "#1E293B",
+          borderRadius: "8px",
+          padding: "10px 12px",
+          fontSize: "0.8rem",
+          lineHeight: "1.5",
+          whiteSpace: "pre-wrap",
+        }}
+      >
+        <div
+          style={{
+            color: "#F87171",
+            textDecoration: "line-through",
+            textDecorationColor: "rgba(248,113,113,0.4)",
+          }}
+        >
+          {oldValue || "(trống)"}
+        </div>
+        <div style={{ color: "#4ADE80", marginTop: "6px" }}>
+          {newValue || "(trống)"}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export const CVBuilder: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<"jd-match" | "cv-editor">(
@@ -173,11 +212,21 @@ export const CVBuilder: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState<boolean>(false);
   const [savedCVId, setSavedCVId] = useState<string | null>(null);
   const [savedCVs, setSavedCVs] = useState<SavedCVSummary[]>([]);
+  const [cvTitle, setCvTitle] = useState<string>("");
   const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
   const [verifications, setVerifications] = useState<InternshipVerification[]>(
     [],
   );
   const [zoomLevel, setZoomLevel] = useState<number>(0.75);
+  const [cvLang, setCvLang] = useState<"vi" | "en">("vi");
+  const [translatedCV, setTranslatedCV] = useState<CVData | null>(null);
+  const [isTranslating, setIsTranslating] = useState<boolean>(false);
+  const translationCacheRef = useRef<Map<string, CVData>>(new Map());
+  const [optimizeDraft, setOptimizeDraft] = useState<CVData | null>(null);
+  const [optimizeRecommendations, setOptimizeRecommendations] = useState<
+    string[]
+  >([]);
+  const [isOptimizing, setIsOptimizing] = useState<boolean>(false);
   const zoomLevelRef = useRef<number>(zoomLevel);
   const viewerContainerRef = useRef<HTMLDivElement>(null);
   const previewWrapperRef = useRef<HTMLDivElement>(null);
@@ -290,6 +339,64 @@ export const CVBuilder: React.FC = () => {
       (cvData.experience || []).filter((exp) => exp.verificationStatus === 1),
     [cvData.experience],
   );
+
+  const baseCVData = useMemo(
+    () => ({ ...cvData, experience: cvExperience }),
+    [cvData, cvExperience],
+  );
+
+  // Translate CV content to English when toggling EN (cached per content version)
+  useEffect(() => {
+    if (cvLang !== "en") {
+      setTranslatedCV(null);
+      return;
+    }
+    const contentKey = JSON.stringify({
+      summary: baseCVData.summary,
+      skills: baseCVData.skills,
+      languages: baseCVData.languages,
+      activities: baseCVData.activities,
+      projects: baseCVData.projects.map((p) => ({
+        name: p.name,
+        role: p.role,
+        description: p.description,
+      })),
+      experience: baseCVData.experience.map((e) => ({
+        company: e.company,
+        role: e.role,
+        description: e.description,
+      })),
+      education: baseCVData.education,
+      certifications: baseCVData.certifications,
+      profile: {
+        faculty: baseCVData.profile.faculty,
+        major: baseCVData.profile.major,
+        hometown: baseCVData.profile.hometown,
+      },
+    });
+    const cached = translationCacheRef.current.get(contentKey);
+    if (cached) {
+      setTranslatedCV(cached);
+      return;
+    }
+    let cancelled = false;
+    setIsTranslating(true);
+    translateCvData(baseCVData)
+      .then((result) => {
+        if (cancelled) return;
+        translationCacheRef.current.set(contentKey, result);
+        setTranslatedCV(result);
+      })
+      .catch(() => {
+        if (!cancelled) setTranslatedCV(null);
+      })
+      .finally(() => {
+        if (!cancelled) setIsTranslating(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [cvLang, baseCVData]);
 
   // Fetch real student scores from .NET API or Supabase DB
   useEffect(() => {
@@ -521,7 +628,9 @@ export const CVBuilder: React.FC = () => {
         projects,
       });
 
-      const pipelineCourses = result.competency_profile.selected_courses || [];
+      const pipelineCourses = (result.competency_profile.selected_courses || []).filter(
+        (course) => (Number(course.grade) || 0) >= 7,
+      );
       const matched = pipelineCourses.map((course) => ({
         subjectCode: course.course_id,
         subjectName: course.course_name,
@@ -926,49 +1035,99 @@ export const CVBuilder: React.FC = () => {
     }));
   };
 
-  const toggleGradeSelection = (subjectName: string) => {
-    setSelectedGrades((prev) =>
-      prev.includes(subjectName)
-        ? prev.filter((name) => name !== subjectName)
-        : [...prev, subjectName],
-    );
+  // const toggleGradeSelection = (subjectName: string) => {
+  //   setSelectedGrades((prev) =>
+  //     prev.includes(subjectName)
+  //       ? prev.filter((name) => name !== subjectName)
+  //       : [...prev, subjectName],
+  //   );
+  // };
+
+  const resolveCvTitle = () =>
+    cvTitle.trim() ||
+    (cvData.profile.fullName
+      ? `CV ${cvData.profile.fullName}`
+      : "CV chưa đặt tên");
+
+  const performSave = async (id: string | null) => {
+    const response = await axios.post<{
+      id: string;
+      title: string;
+      updatedAt: string;
+    }>("http://localhost:5000/api/saved-cvs", {
+      id,
+      title: resolveCvTitle(),
+      contentJson: JSON.stringify({ cvData, jdText, selectedGrades }),
+    });
+    setSavedCVId(response.data.id);
+    setCvTitle(response.data.title);
+    setSavedCVs((previous) => [
+      {
+        id: response.data.id,
+        title: response.data.title,
+        updatedAt: response.data.updatedAt,
+      },
+      ...previous.filter((cv) => cv.id !== response.data.id),
+    ]);
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
   };
 
   const handleSave = async () => {
     try {
-      const response = await axios.post<{
-        id: string;
-        title: string;
-        updatedAt: string;
-      }>("http://localhost:5000/api/saved-cvs", {
-        id: savedCVId,
-        title: cvData.profile.fullName
-          ? `CV ${cvData.profile.fullName}`
-          : "CV chưa đặt tên",
-        contentJson: JSON.stringify({ cvData, jdText, selectedGrades }),
-      });
-      setSavedCVId(response.data.id);
-      setSavedCVs((previous) => [
-        {
-          id: response.data.id,
-          title: response.data.title,
-          updatedAt: response.data.updatedAt,
-        },
-        ...previous.filter((cv) => cv.id !== response.data.id),
-      ]);
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+      await performSave(savedCVId);
     } catch {
       setApiMessage("Không thể lưu CV. Vui lòng thử lại.");
     }
   };
 
+  const handleSaveAs = async () => {
+    try {
+      await performSave(null);
+    } catch {
+      setApiMessage("Không thể lưu CV với tên mới. Vui lòng thử lại.");
+    }
+  };
+
+  const handleAutoOptimize = async () => {
+    if (!jdText.trim()) {
+      setApiMessage("Vui lòng dán Mô tả công việc (JD) trước khi tối ưu ATS.");
+      return;
+    }
+    setIsOptimizing(true);
+    try {
+      const result = await autoOptimizeCv(cvData, jdText);
+      setOptimizeDraft(result.optimized_cv);
+      setOptimizeRecommendations(result.recommendations || []);
+    } catch {
+      setApiMessage("Không thể tối ưu CV. Vui lòng thử lại.");
+    } finally {
+      setIsOptimizing(false);
+    }
+  };
+
+  const handleApplyOptimize = () => {
+    if (!optimizeDraft) return;
+    setCvData(optimizeDraft);
+    setOptimizeDraft(null);
+    setOptimizeRecommendations([]);
+    setTranslatedCV(null);
+    setApiMessage("Đã áp dụng bản CV đã tối ưu ATS.");
+  };
+
+  const handleCancelOptimize = () => {
+    setOptimizeDraft(null);
+    setOptimizeRecommendations([]);
+  };
+
   const handleLoadSavedCV = async (id: string) => {
     if (!id) return;
     try {
-      const response = await axios.get<{ id: string; content: string }>(
-        `http://localhost:5000/api/saved-cvs/${id}`,
-      );
+      const response = await axios.get<{
+        id: string;
+        title: string;
+        content: string;
+      }>(`http://localhost:5000/api/saved-cvs/${id}`);
       const saved = JSON.parse(response.data.content) as {
         cvData: CVData;
         jdText?: string;
@@ -981,6 +1140,7 @@ export const CVBuilder: React.FC = () => {
           saved.cvData.grades.map((grade) => grade.subjectName),
       );
       setSavedCVId(response.data.id);
+      setCvTitle(response.data.title);
       setActiveTab("cv-editor");
       setApiMessage("Đã mở CV đã lưu để tiếp tục chỉnh sửa.");
     } catch {
@@ -995,7 +1155,9 @@ export const CVBuilder: React.FC = () => {
     setIsExportingPdf(true);
 
     try {
-      const blob = await exportCVPdf({ ...cvData, experience: cvExperience });
+      const blob = await exportCVPdf(
+        cvLang === "en" && translatedCV ? translatedCV : baseCVData,
+      );
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -1124,6 +1286,7 @@ export const CVBuilder: React.FC = () => {
             className="btn-icon-text"
             onClick={() => {
               setSavedCVId(null);
+              setCvTitle("");
               setCvData(defaultCVData);
               setJdText("");
               setSelectedGrades([]);
@@ -1157,6 +1320,18 @@ export const CVBuilder: React.FC = () => {
           </button>
           */}
 
+          <input
+            aria-label="Tên CV"
+            className="input-field"
+            value={cvTitle}
+            onChange={(event) => setCvTitle(event.target.value)}
+            placeholder={
+              cvData.profile.fullName
+                ? `CV ${cvData.profile.fullName}`
+                : "Tên CV"
+            }
+            style={{ minWidth: "160px", padding: "8px 10px" }}
+          />
           <button
             className="btn-icon-text"
             onClick={handleSave}
@@ -1171,6 +1346,17 @@ export const CVBuilder: React.FC = () => {
               <FloppyDisk size={18} />
             )}
             <span>{saveSuccess ? "Đã lưu CV!" : "Lưu CV"}</span>
+          </button>
+          <button
+            className="btn-icon-text"
+            onClick={handleSaveAs}
+            style={{
+              background: "rgba(30, 41, 59, 0.8)",
+              border: "1px solid var(--color-border)",
+            }}
+          >
+            <Copy size={18} />
+            <span>Lưu với tên mới</span>
           </button>
         </div>
       </div>
@@ -1321,6 +1507,25 @@ export const CVBuilder: React.FC = () => {
                 </p>
               </div>
               <ATSScoreBadge score={atsReport.score} compact />
+              <button
+                className="btn-icon-text"
+                onClick={handleAutoOptimize}
+                disabled={isOptimizing}
+                style={{
+                  background: "linear-gradient(135deg, #7C3AED, #2563EB)",
+                  border: "none",
+                  color: "#fff",
+                }}
+              >
+                {isOptimizing ? (
+                  <Spinner size={16} className="spin" />
+                ) : (
+                  <Sparkle size={16} />
+                )}
+                <span>
+                  {isOptimizing ? "Đang tối ưu..." : "Tự động tối ưu ATS"}
+                </span>
+              </button>
             </div>
             {/* Section 1: Personal Info */}
             <div
@@ -1625,76 +1830,7 @@ export const CVBuilder: React.FC = () => {
               </div>
             </div>
 
-            {/* Section 4: Languages */}
-            <div
-              style={{
-                borderBottom: "1px solid var(--color-border)",
-                paddingBottom: "16px",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1rem",
-                  marginBottom: "12px",
-                  color: "#22C55E",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                <Sparkle size={18} />
-                <span>4. Ngoại ngữ</span>
-              </h3>
-              <div
-                style={{ display: "flex", gap: "8px", marginBottom: "12px" }}
-              >
-                <input
-                  type="text"
-                  className="input-field"
-                  placeholder="Nhập ngoại ngữ (ví dụ: Tiếng Anh)"
-                  value={newLanguage}
-                  onChange={(e) => setNewLanguage(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAddLanguage()}
-                />
-                <button
-                  className="btn-icon-text primary"
-                  onClick={handleAddLanguage}
-                  style={{ padding: "0 16px" }}
-                >
-                  <Plus size={20} />
-                </button>
-              </div>
-              <div className="tag-list">
-                {cvData.languages.map((lang, idx) => (
-                  <span
-                    key={idx}
-                    className="tag"
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "6px",
-                    }}
-                  >
-                    <span>{lang}</span>
-                    <button
-                      onClick={() => handleRemoveLanguage(lang)}
-                      style={{
-                        border: "none",
-                        background: "none",
-                        color: "#EF4444",
-                        cursor: "pointer",
-                        display: "flex",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Trash size={14} />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Section 4.5: EducationForm Component */}
+            {/* Section 4: EducationForm Component */}
             <EducationForm
               education={
                 cvData.education && cvData.education.length > 0
@@ -1735,14 +1871,7 @@ export const CVBuilder: React.FC = () => {
               onSubmitVerification={handleSubmitVerification}
             />
 
-            {/* Section 7: CertForm Component */}
-            <CertForm
-              certifications={cvData.certifications || []}
-              onAddCert={handleAddCert}
-              onRemoveCert={handleRemoveCert}
-            />
-
-            {/* Section 8: Grades Showcase */}
+            {/* Section 7: CertForm Component (with Languages merged) */}
             <div
               style={{
                 borderBottom: "1px solid var(--color-border)",
@@ -1759,70 +1888,64 @@ export const CVBuilder: React.FC = () => {
                   gap: "6px",
                 }}
               >
-                <GraduationCap size={18} />
-                <span>
-                  8. Hiển thị kết quả môn học đã matched (Từ CSDL Supabase)
-                </span>
+                <Sparkle size={18} />
+                <span>7. Chứng chỉ & Ngoại ngữ</span>
               </h3>
-              <p
-                style={{
-                  fontSize: "0.8rem",
-                  color: "#94A3B8",
-                  marginBottom: "8px",
-                }}
-              >
-                Chọn các môn học đã được AI khớp với JD để hiển thị vào CV ứng
-                tuyển:
-              </p>
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: "6px" }}
-              >
-                {cvData.grades.map((grade) => (
-                  <label
-                    key={grade.subjectName}
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      padding: "8px 12px",
-                      background: "rgba(255,255,255,0.02)",
-                      border: "1px solid var(--color-border)",
-                      borderRadius: "6px",
-                      cursor: "pointer",
-                    }}
+              {/* Languages input */}
+              <div style={{ marginBottom: "12px" }}>
+                <label style={{ fontSize: "0.85rem", color: "#94A3B8", fontWeight: 500, display: "block", marginBottom: "6px" }}>Ngoại ngữ</label>
+                <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
+                  <input
+                    type="text"
+                    className="input-field"
+                    placeholder="Nhập ngoại ngữ (ví dụ: Tiếng Anh - Toeic 750)"
+                    value={newLanguage}
+                    onChange={(e) => setNewLanguage(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddLanguage()}
+                  />
+                  <button
+                    className="btn-icon-text primary"
+                    onClick={handleAddLanguage}
+                    style={{ padding: "0 16px" }}
                   >
-                    <div
+                    <Plus size={20} />
+                  </button>
+                </div>
+                <div className="tag-list">
+                  {cvData.languages.map((lang, idx) => (
+                    <span
+                      key={idx}
+                      className="tag"
                       style={{
                         display: "flex",
                         alignItems: "center",
-                        gap: "8px",
+                        gap: "6px",
                       }}
                     >
-                      <input
-                        type="checkbox"
-                        checked={selectedGrades.includes(grade.subjectName)}
-                        onChange={() => toggleGradeSelection(grade.subjectName)}
-                      />
-                      <span style={{ fontSize: "0.85rem" }}>
-                        {grade.subjectName}
-                      </span>
-                    </div>
-                    <span
-                      style={{
-                        fontFamily: "var(--font-heading)",
-                        color: "#22C55E",
-                        fontWeight: 700,
-                        fontSize: "0.85rem",
-                      }}
-                    >
-                      {typeof grade.score === "number"
-                        ? grade.score.toFixed(1)
-                        : grade.score}{" "}
-                      / 10
+                      <span>{lang}</span>
+                      <button
+                        onClick={() => handleRemoveLanguage(lang)}
+                        style={{
+                          border: "none",
+                          background: "none",
+                          color: "#EF4444",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <Trash size={14} />
+                      </button>
                     </span>
-                  </label>
-                ))}
+                  ))}
+                </div>
               </div>
+              {/* Certifications */}
+              <CertForm
+                certifications={cvData.certifications || []}
+                onAddCert={handleAddCert}
+                onRemoveCert={handleRemoveCert}
+              />
             </div>
 
             {/* Section 9: SkillRadarChart Component */}
@@ -1908,9 +2031,26 @@ export const CVBuilder: React.FC = () => {
             <div className="cv-viewer-toolbar">
               <div className="cv-viewer-toolbar-title">
                 <FileText size={18} />
-                <span>CV Live Preview (Overleaf Harshibar Template)</span>
+                <span>CV Live Preview</span>
               </div>
               <div className="cv-viewer-controls">
+                {/* Language Toggle */}
+                <button
+                  className="cv-zoom-btn"
+                  onClick={() => setCvLang((prev) => (prev === "vi" ? "en" : "vi"))}
+                  title={cvLang === "vi" ? "Switch to English" : "Chuyển sang Tiếng Việt"}
+                  style={{ minWidth: "48px" }}
+                >
+                  <span>{cvLang === "vi" ? "EN" : "VI"}</span>
+                </button>
+                {cvLang === "en" && isTranslating && (
+                  <span
+                    className="cv-zoom-label"
+                    style={{ fontStyle: "italic", color: "#94A3B8" }}
+                  >
+                    Đang dịch...
+                  </span>
+                )}
                 <button
                   className="cv-zoom-btn"
                   onClick={handleZoomOut}
@@ -1952,10 +2092,153 @@ export const CVBuilder: React.FC = () => {
                 }}
               >
                 <CVPreview
-                  cvData={{ ...cvData, experience: cvExperience }}
+                  cvData={
+                    cvLang === "en" && translatedCV ? translatedCV : baseCVData
+                  }
                   selectedGrades={selectedGrades}
+                  cvLang={cvLang}
                 />
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {optimizeDraft && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 1000,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "24px",
+          }}
+          onClick={handleCancelOptimize}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: "#0F172A",
+              border: "1px solid var(--color-border)",
+              borderRadius: "12px",
+              maxWidth: "720px",
+              width: "100%",
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "16px 20px",
+                borderBottom: "1px solid var(--color-border)",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  color: "#F8FAFC",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                <Sparkle size={18} color="#A78BFA" />
+                Xem trước bản CV đã tối ưu ATS
+              </h3>
+              <p style={{ margin: "4px 0 0", color: "#94A3B8", fontSize: "0.8rem" }}>
+                AI không bịa thêm kỹ năng hay nội dung mới — chỉ viết lại & sắp xếp theo JD.
+              </p>
+            </div>
+            <div style={{ padding: "16px 20px", overflowY: "auto", flex: 1 }}>
+              {optimizeRecommendations.length > 0 && (
+                <div style={{ marginBottom: "16px" }}>
+                  <strong style={{ color: "#A78BFA", fontSize: "0.85rem" }}>
+                    Gợi ý cải thiện:
+                  </strong>
+                  <ul
+                    style={{
+                      margin: "8px 0 0",
+                      paddingLeft: "20px",
+                      color: "#E2E8F0",
+                      fontSize: "0.82rem",
+                    }}
+                  >
+                    {optimizeRecommendations.map((rec, i) => (
+                      <li key={i} style={{ marginBottom: "4px" }}>
+                        {rec}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <OptimizeDiffBlock
+                label="Tóm tắt (Summary)"
+                oldValue={cvData.summary}
+                newValue={optimizeDraft.summary}
+              />
+              <OptimizeDiffBlock
+                label="Kỹ năng (thứ tự ưu tiên theo JD)"
+                oldValue={cvData.skills.join(", ")}
+                newValue={optimizeDraft.skills.join(", ")}
+              />
+              {optimizeDraft.projects.map((np, i) => {
+                const p = cvData.projects[i];
+                if (!p) return null;
+                return (
+                  <OptimizeDiffBlock
+                    key={`proj-${i}`}
+                    label={`Dự án: ${np.name || p.name}`}
+                    oldValue={[p.role, p.description].filter(Boolean).join("\n")}
+                    newValue={[np.role, np.description]
+                      .filter(Boolean)
+                      .join("\n")}
+                  />
+                );
+              })}
+              {optimizeDraft.experience.map((ne, i) => {
+                const e = cvData.experience[i];
+                if (!e) return null;
+                return (
+                  <OptimizeDiffBlock
+                    key={`exp-${i}`}
+                    label={`Kinh nghiệm: ${ne.company || e.company}`}
+                    oldValue={[e.role, e.description].filter(Boolean).join("\n")}
+                    newValue={[ne.role, ne.description]
+                      .filter(Boolean)
+                      .join("\n")}
+                  />
+                );
+              })}
+            </div>
+            <div
+              style={{
+                padding: "16px 20px",
+                borderTop: "1px solid var(--color-border)",
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: "10px",
+              }}
+            >
+              <button className="btn-icon-text" onClick={handleCancelOptimize}>
+                Hủy
+              </button>
+              <button
+                className="btn-icon-text primary"
+                onClick={handleApplyOptimize}
+                style={{
+                  background: "linear-gradient(135deg, #7C3AED, #2563EB)",
+                  border: "none",
+                  color: "#fff",
+                }}
+              >
+                <Check size={16} />
+                <span>Áp dụng vào CV</span>
+              </button>
             </div>
           </div>
         </div>

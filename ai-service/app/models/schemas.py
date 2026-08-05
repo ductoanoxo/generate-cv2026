@@ -74,10 +74,16 @@ class EducationSchema(BaseModel):
     degree: Optional[str] = None
 
 
+class CategorizedSkillGroupSchema(BaseModel):
+    category: str = ""
+    items: List[str] = []
+
+
 class CVDataSchema(BaseModel):
     profile: ProfileSchema = Field(default_factory=ProfileSchema)
     summary: str = ""
     skills: List[str] = []
+    categorizedSkills: Optional[List[CategorizedSkillGroupSchema]] = None
     languages: List[str] = []
     projects: List[ProjectSchema] = []
     education: List[EducationSchema] = []

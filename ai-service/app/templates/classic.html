@@ -277,14 +277,19 @@
   </div>
   {% endif %}
 
-  {% if skills %}
+  {% if categorized_skills %}
   <div class="section">
-    <div class="section-title">Kỹ năng</div>
-    <div class="skills-list">
-      {% for skill in skills %}
-      <span>{{ skill }}</span>
-      {% endfor %}
-    </div>
+    <div class="section-title">KỸ NĂNG & CÔNG NGHỆ</div>
+    {% for group in categorized_skills %}
+    <div style="font-size: 10.5pt; color: #2d2d2d; line-height: 1.35; margin-bottom: 2px;"><strong>• {{ group.category }}:</strong> {{ group.items | join(", ") }}.</div>
+    {% endfor %}
+  </div>
+  {% elif skills %}
+  <div class="section">
+    <div class="section-title">KỸ NĂNG & CÔNG NGHỆ</div>
+    {% for skill in skills %}
+    <div style="font-size: 10.5pt; color: #2d2d2d; line-height: 1.35; margin-bottom: 2px;">• {{ skill }}</div>
+    {% endfor %}
   </div>
   {% endif %}
 

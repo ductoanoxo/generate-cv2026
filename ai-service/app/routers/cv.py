@@ -7,6 +7,7 @@ from app.services.competency_service import competency_service
 from app.services.cv_generator_service import LLMGenerationError, cv_generator_service
 
 from app.services.ats_optimizer_service import ats_optimizer_service
+from app.services.auto_optimize_service import auto_optimize_service
 from app.services.validator_service import validator_service
 from app.graph import cv_pipeline_graph
 
@@ -65,6 +66,17 @@ class OptimizeATSRequest(BaseModel):
 class OptimizeATSResponse(BaseModel):
     status: str
     result: Dict[str, Any]
+
+
+class AutoOptimizeRequest(BaseModel):
+    cv_data: Dict[str, Any] = Field(..., description="Dữ liệu CV dạng JSON")
+    jd_text: str = Field(..., description="Nội dung mô tả công việc (JD)")
+
+
+class AutoOptimizeResponse(BaseModel):
+    status: str
+    optimized_cv: Dict[str, Any]
+    recommendations: List[str] = Field(default_factory=list)
 
 
 class ValidateEvidenceRequest(BaseModel):
@@ -158,6 +170,27 @@ async def optimize_ats(payload: OptimizeATSRequest):
     except Exception as e:
         logger.error(f"Error analyzing ATS: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Failed to analyze ATS: {str(e)}")
+
+
+@router.post("/auto-optimize", response_model=AutoOptimizeResponse)
+async def auto_optimize(payload: AutoOptimizeRequest):
+    """
+    Tự động tối ưu CV cho khớp JD bằng LLM (viết lại Summary/Kỹ năng/Dự án/Kinh nghiệm),
+    có grounding: không thêm kỹ năng hay nội dung không có trong CV gốc.
+    """
+    try:
+        optimized_cv, recommendations = await auto_optimize_service.optimize_cv(
+            cv_data=payload.cv_data,
+            jd_text=payload.jd_text,
+        )
+        return AutoOptimizeResponse(
+            status="success",
+            optimized_cv=optimized_cv,
+            recommendations=recommendations,
+        )
+    except Exception as e:
+        logger.error(f"Error auto-optimizing CV: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to auto-optimize CV: {str(e)}")
 
 
 @router.post("/validate-evidence", response_model=ValidateEvidenceResponse)

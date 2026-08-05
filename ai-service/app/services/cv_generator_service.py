@@ -87,9 +87,12 @@ class CVGeneratorService:
         student_name = student.get("full_name", "Sinh viên Tây Đô")
 
         # Build relevant courses strictly from matched selected_courses
+        # Chỉ giữ môn học có điểm >= 7 để đưa vào CV
         relevant_courses = []
         for c in selected_courses:
-            grade_val = c.get("grade", 8.0)
+            grade_val = float(c.get("grade") or c.get("combinedResult") or 0)
+            if grade_val < 7.0:
+                continue
             clos = c.get("clos", [])
             relevant_courses.append({
                 "name": c.get("course_name", "Học phần"),
