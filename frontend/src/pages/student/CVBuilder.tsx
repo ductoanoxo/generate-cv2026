@@ -204,7 +204,6 @@ export const CVBuilder: React.FC = () => {
     "jd-match",
   );
   const [cvData, setCvData] = useState<CVData>(defaultCVData);
-  const [newLanguage, setNewLanguage] = useState<string>("");
   const [newActivity, setNewActivity] = useState<string>("");
   const [selectedGrades, setSelectedGrades] = useState<string[]>(
     cvData.grades.map((g) => g.subjectName),
@@ -852,23 +851,6 @@ export const CVBuilder: React.FC = () => {
     }));
   };
 
-  const handleAddLanguage = () => {
-    if (newLanguage.trim() && !cvData.languages.includes(newLanguage.trim())) {
-      setCvData((prev) => ({
-        ...prev,
-        languages: [...prev.languages, newLanguage.trim()],
-      }));
-      setNewLanguage("");
-    }
-  };
-
-  const handleRemoveLanguage = (lang: string) => {
-    setCvData((prev) => ({
-      ...prev,
-      languages: prev.languages.filter((l) => l !== lang),
-    }));
-  };
-
   const handleAddActivity = () => {
     if (newActivity.trim() && !cvData.activities.includes(newActivity.trim())) {
       setCvData((prev) => ({
@@ -1018,7 +1000,6 @@ export const CVBuilder: React.FC = () => {
   };
 
   // Handlers for Certifications
-
   const handleAddCert = (cert: Certification) => {
     setCvData((prev) => ({
       ...prev,
@@ -1895,90 +1876,20 @@ export const CVBuilder: React.FC = () => {
               onSubmitVerification={handleSubmitVerification}
             />
 
-            {/* Section 7: CertForm Component (with Languages merged) */}
-            <div
-              style={{
-                borderBottom: "1px solid var(--color-border)",
-                paddingBottom: "16px",
-              }}
-            >
-              <h3
-                style={{
-                  fontSize: "1rem",
-                  marginBottom: "12px",
-                  color: "#22C55E",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px",
-                }}
-              >
-                <Sparkle size={18} />
-                <span>7. Chứng chỉ & Ngoại ngữ</span>
-              </h3>
-              {/* Languages input */}
-              <div style={{ marginBottom: "12px" }}>
-                <label style={{ fontSize: "0.85rem", color: "#94A3B8", fontWeight: 500, display: "block", marginBottom: "6px" }}>Ngoại ngữ</label>
-                <div style={{ display: "flex", gap: "8px", marginBottom: "8px" }}>
-                  <input
-                    type="text"
-                    className="input-field"
-                    placeholder="Nhập ngoại ngữ (ví dụ: Tiếng Anh - Toeic 750)"
-                    value={newLanguage}
-                    onChange={(e) => setNewLanguage(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && handleAddLanguage()}
-                  />
-                  <button
-                    className="btn-icon-text primary"
-                    onClick={handleAddLanguage}
-                    style={{ padding: "0 16px" }}
-                  >
-                    <Plus size={20} />
-                  </button>
-                </div>
-                <div className="tag-list">
-                  {cvData.languages.map((lang, idx) => (
-                    <span
-                      key={idx}
-                      className="tag"
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "6px",
-                      }}
-                    >
-                      <span>{lang}</span>
-                      <button
-                        onClick={() => handleRemoveLanguage(lang)}
-                        style={{
-                          border: "none",
-                          background: "none",
-                          color: "#EF4444",
-                          cursor: "pointer",
-                          display: "flex",
-                          alignItems: "center",
-                        }}
-                      >
-                        <Trash size={14} />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-              </div>
-              {/* Certifications */}
-              <CertForm
-                certifications={cvData.certifications || []}
-                onAddCert={handleAddCert}
-                onRemoveCert={handleRemoveCert}
-              />
-            </div>
-
-            {/* Section 9: SkillRadarChart Component */}
+            {/* Section 7: SkillRadarChart Component */}
             <SkillRadarChart
               grades={cvData.grades}
               selectedGrades={selectedGrades}
             />
 
-            {/* Section 10: Activities */}
+            {/* Section 8: Certification */}
+            <CertForm
+              certifications={cvData.certifications || []}
+              onAddCert={handleAddCert}
+              onRemoveCert={handleRemoveCert}
+            />
+
+            {/* Section 9: Activities */}
             <div style={{ paddingBottom: "16px" }}>
               <h3
                 style={{
@@ -1991,7 +1902,7 @@ export const CVBuilder: React.FC = () => {
                 }}
               >
                 <Sparkle size={18} />
-                <span>10. Hoạt động ngoại khóa</span>
+                <span>9. Hoạt động ngoại khóa</span>
               </h3>
               <div
                 style={{ display: "flex", gap: "8px", marginBottom: "12px" }}

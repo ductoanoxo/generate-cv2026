@@ -70,7 +70,7 @@ export const EducationForm: React.FC<EducationFormProps> = ({
     <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
       <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <GraduationCap size={18} />
-        <span>Học vấn & Bằng cấp (Education)</span>
+        <span>4. Học vấn & Bằng cấp (Education)</span>
       </h3>
 
       {/* Manual Input Form to Add New Education */}
