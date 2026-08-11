@@ -66,7 +66,7 @@ export const SkillRadarChart: React.FC<SkillRadarChartProps> = ({
     <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
       <h3 style={{ fontSize: '1rem', marginBottom: '8px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <ChartLineUp size={18} />
-        <span>9. Biểu đồ Radar Năng lực Chuyên môn</span>
+        <span>7. Biểu đồ Radar Năng lực Chuyên môn</span>
       </h3>
       <p style={{ fontSize: '0.8rem', color: '#94A3B8', marginBottom: '12px' }}>
         Tự động tính toán & trực quan hóa nhóm kỹ năng dựa trên kết quả môn học đã được chọn:

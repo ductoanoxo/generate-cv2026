@@ -32,7 +32,7 @@ export const CertForm: React.FC<CertFormProps> = ({
     <div style={{ borderBottom: '1px solid var(--color-border)', paddingBottom: '16px' }}>
       <h3 style={{ fontSize: '1rem', marginBottom: '12px', color: '#22C55E', display: 'flex', alignItems: 'center', gap: '6px' }}>
         <Certificate size={18} />
-        <span>7. Chứng chỉ & Bằng cấp</span>
+        <span>8. Chứng chỉ & Bằng cấp</span>
       </h3>
 
       {/* Input Form */}
