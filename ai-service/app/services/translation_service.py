@@ -1,6 +1,7 @@
 import json
 import logging
 import re
+import unicodedata
 from typing import Any, Dict, Optional
 
 import httpx
@@ -16,6 +17,7 @@ TRANSLATE_SYSTEM_PROMPT = (
     "- Return a single JSON object with EXACTLY the same keys as the input object.\n"
     "- Preserve proper nouns, company/brand names, technology names (Python, React, Docker...), "
     "numbers, dates, and any text that is already English.\n"
+    "- For Vietnamese personal names, preserve the name and order but transliterate to Latin letters without diacritics.\n"
     "- Translate Vietnamese text accurately; do not invent, add, or remove content.\n"
     "- Do NOT add or remove any key or field.\n"
 )
@@ -74,6 +76,7 @@ class TranslationService:
                     "name": p.get("name", ""),
                     "role": p.get("role", ""),
                     "description": p.get("description", ""),
+                    "technologies": p.get("technologies", []),
                 }
                 for p in cv_data.get("projects", [])
             ],
@@ -93,11 +96,19 @@ class TranslationService:
                 }
                 for ed in cv_data.get("education", [])
             ],
+            "categorizedSkills": [
+                {
+                    "category": group.get("category", ""),
+                    "items": group.get("items", []),
+                }
+                for group in cv_data.get("categorizedSkills", [])
+            ],
             "certifications": [
                 {"certificationName": c.get("certificationName", "")}
                 for c in cv_data.get("certifications", [])
             ],
             "profile": {
+                "fullName": profile.get("fullName", ""),
                 "faculty": profile.get("faculty", ""),
                 "major": profile.get("major", ""),
                 "hometown": profile.get("hometown", ""),
@@ -129,16 +140,26 @@ class TranslationService:
         if isinstance(translated.get("activities"), list) and len(translated["activities"]) == len(out.get("activities", [])):
             out["activities"] = translated["activities"]
 
-        replace_list("projects", ("name", "role", "description"))
+        replace_list("projects", ("name", "role", "description", "technologies"))
         replace_list("experience", ("company", "role", "description"))
         replace_list("education", ("school", "major", "degree"))
+        replace_list("categorizedSkills", ("category", "items"))
         replace_list("certifications", ("certificationName",))
 
         tr_profile = translated.get("profile")
         if isinstance(tr_profile, dict):
-            for k in ("faculty", "major", "hometown"):
+            for k in ("fullName", "faculty", "major", "hometown"):
                 if tr_profile.get(k):
                     out["profile"][k] = tr_profile[k]
+
+        profile = out.get("profile")
+        if isinstance(profile, dict) and isinstance(profile.get("fullName"), str):
+            normalized_name = unicodedata.normalize("NFD", profile["fullName"])
+            normalized_name = "".join(
+                char for char in normalized_name
+                if unicodedata.category(char) != "Mn"
+            )
+            profile["fullName"] = normalized_name.translate(str.maketrans({"đ": "d", "Đ": "D"}))
         return out
 
     def _glossary_text(self, text: str) -> str:
@@ -186,7 +207,7 @@ class TranslationService:
                 {"role": "user", "content": prompt},
             ],
             "temperature": 0.2,
-            "max_tokens": 3000,
+            "max_tokens": 8000,
             "response_format": {"type": "json_object"},
         }
         try:
