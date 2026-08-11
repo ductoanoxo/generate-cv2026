@@ -340,8 +340,35 @@ export const CVBuilder: React.FC = () => {
   );
 
   const baseCVData = useMemo(
-    () => ({ ...cvData, experience: cvExperience }),
-    [cvData, cvExperience],
+    () => ({
+      ...cvData,
+      education:
+        cvData.education && cvData.education.length > 0
+          ? cvData.education
+          : [
+              {
+                school: "Trường Cao đẳng Tây Đô",
+                major: cvData.profile.major
+                  ? `${cvData.profile.major}${
+                      cvData.profile.faculty ? ` (${cvData.profile.faculty})` : ""
+                    }`
+                  : "Kỹ thuật Phần mềm",
+                period: cvData.profile.academicYear || "",
+                gpa: cvData.profile.gpa > 0 ? cvData.profile.gpa : undefined,
+                degree: "Cao đẳng",
+              },
+            ],
+      experience: cvExperience,
+    }),
+    [
+      cvData,
+      cvData.education,
+      cvData.profile.academicYear,
+      cvData.profile.faculty,
+      cvData.profile.gpa,
+      cvData.profile.major,
+      cvExperience,
+    ],
   );
 
   // Translate CV content to English when toggling EN (cached per content version)
@@ -350,29 +377,7 @@ export const CVBuilder: React.FC = () => {
       setTranslatedCV(null);
       return;
     }
-    const contentKey = JSON.stringify({
-      summary: baseCVData.summary,
-      skills: baseCVData.skills,
-      languages: baseCVData.languages,
-      activities: baseCVData.activities,
-      projects: baseCVData.projects.map((p) => ({
-        name: p.name,
-        role: p.role,
-        description: p.description,
-      })),
-      experience: baseCVData.experience.map((e) => ({
-        company: e.company,
-        role: e.role,
-        description: e.description,
-      })),
-      education: baseCVData.education,
-      certifications: baseCVData.certifications,
-      profile: {
-        faculty: baseCVData.profile.faculty,
-        major: baseCVData.profile.major,
-        hometown: baseCVData.profile.hometown,
-      },
-    });
+    const contentKey = JSON.stringify(baseCVData);
     const cached = translationCacheRef.current.get(contentKey);
     if (cached) {
       setTranslatedCV(cached);
@@ -1813,23 +1818,7 @@ export const CVBuilder: React.FC = () => {
 
             {/* Section 4: EducationForm Component */}
             <EducationForm
-              education={
-                cvData.education && cvData.education.length > 0
-                  ? cvData.education
-                  : [
-                      {
-                        school: "Trường Cao đẳng Tây Đô",
-                        major: cvData.profile.major
-                          ? `${cvData.profile.major}${
-                              cvData.profile.faculty ? ` (${cvData.profile.faculty})` : ""
-                            }`
-                          : "Kỹ thuật Phần mềm",
-                        period: cvData.profile.academicYear || "",
-                        gpa: cvData.profile.gpa > 0 ? cvData.profile.gpa : undefined,
-                        degree: "Cao đẳng",
-                      },
-                    ]
-              }
+              education={baseCVData.education || []}
               onAddEducation={handleAddEducation}
               onUpdateEducation={handleUpdateEducation}
               onRemoveEducation={handleRemoveEducation}

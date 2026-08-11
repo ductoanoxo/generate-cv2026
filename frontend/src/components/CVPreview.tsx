@@ -21,6 +21,12 @@ export interface PageContent {
   sections: PageSectionItem[];
 }
 
+const removeVietnameseDiacritics = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, (char) => (char === "đ" ? "d" : "D"));
+
 export const getFormattedSkillGroups = (
   cvData: CVData,
 ): CategorizedSkillGroup[] => {
@@ -159,7 +165,11 @@ const CVContent: React.FC<{
                 color: "#000000",
               }}
             >
-              {cvData.profile.fullName || "NGUYỄN VĂN A"}
+              {isEn
+                ? removeVietnameseDiacritics(
+                    cvData.profile.fullName || "NGUYỄN VĂN A",
+                  )
+                : cvData.profile.fullName || "NGUYỄN VĂN A"}
             </span>
             {cvData.profile.phoneNumber && (
               <span
@@ -245,7 +255,7 @@ const CVContent: React.FC<{
       {getSecConfig("education").exists && (
         <div className="cv-pdf-section" data-section-key="education">
           {getSecConfig("education").showTitle && (
-            <div className="cv-pdf-section-title">{isEn ? "EDUCATION" : "HỌC VẤN / EDUCATION"}</div>
+            <div className="cv-pdf-section-title">{isEn ? "EDUCATION" : "HỌC VẤN"}</div>
           )}
           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
             {(cvData.education && cvData.education.length > 0
