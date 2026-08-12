@@ -599,6 +599,7 @@ export const CVBuilder: React.FC = () => {
         role: project.role,
         description: project.description,
         technologies: project.technologies,
+        github_url: project.githubUrl,
       }));
       const jdLower = normalizedJd.toLowerCase();
       const requiredSkills = [
@@ -710,11 +711,15 @@ export const CVBuilder: React.FC = () => {
         ],
         categorizedSkills: generatedCategorized || previous.categorizedSkills,
         languages: generatedLanguages,
-        projects: generated.projects.map((project) => ({
+        projects: generated.projects.map((project, index) => ({
           name: project.name,
           role: project.role,
           description: project.description,
           technologies: project.technologies,
+          githubUrl:
+            project.github_url ||
+            project.githubUrl ||
+            cvData.projects[index]?.githubUrl,
         })),
         grades: updatedCvGrades,
       }));

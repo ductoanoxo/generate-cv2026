@@ -128,6 +128,12 @@
     color: #666;
     margin-top: 1px;
   }
+  .project-github {
+    font-size: 9.5pt;
+    color: #1D4ED8;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
   .exp-header {
     display: flex;
     justify-content: space-between;
@@ -360,6 +366,9 @@
       {% endif %}
       {% if p.description %}
       <div class="project-desc">• {{ p.description }}</div>
+      {% endif %}
+      {% if p.github_url %}
+      <div class="project-github">GitHub: <a href="{{ p.github_url }}">{{ p.github_url }}</a></div>
       {% endif %}
     </div>
     {% endfor %}

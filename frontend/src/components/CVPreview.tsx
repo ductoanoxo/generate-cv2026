@@ -503,6 +503,28 @@ const CVContent: React.FC<{
                         ))}
                       </div>
                     )}
+                    {proj.githubUrl && (
+                      <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        fontSize: "0.7rem",
+                          color: "#1D4ED8",
+                          marginTop: "2px",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        <span>GitHub: </span>
+                        <a
+                          href={proj.githubUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          style={{ color: "inherit", textDecoration: "underline" }}
+                        >
+                          {proj.githubUrl}
+                        </a>
+                      </div>
+                    )}
                   </div>
                 );
               })}

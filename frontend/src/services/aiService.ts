@@ -129,6 +129,8 @@ export interface GenerateCVResponse {
       description: string;
       technologies: string[];
       highlights: string[];
+      github_url?: string;
+      githubUrl?: string;
     }[];
     certifications: any[];
     languages: string[];

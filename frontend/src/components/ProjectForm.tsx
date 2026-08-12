@@ -50,11 +50,13 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
         role: newProject.role.trim(),
         description: newProject.description.trim(),
         technologies: techArray,
+        githubUrl: githubUrl.trim() || undefined,
         startDate: newProject.startDate || undefined,
         endDate: newProject.endDate || undefined
       });
 
       setNewProject({ name: '', role: '', description: '', technologies: '', startDate: '', endDate: '' });
+      setGithubUrl('');
     }
   };
 
@@ -271,4 +273,3 @@ export const ProjectForm: React.FC<ProjectFormProps> = ({
     </div>
   );
 };
-

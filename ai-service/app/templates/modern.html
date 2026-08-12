@@ -69,6 +69,7 @@
   .project-period { font-size: 8.5pt; color: #444444; font-weight: 600; white-space: nowrap; }
   .project-tech { font-size: 8.5pt; color: #333333; margin-top: 1px; }
   .project-role { font-size: 8.5pt; color: #333333; margin-top: 1px; }
+  .project-github { font-size: 8.5pt; color: #1D4ED8; margin-top: 2px; overflow-wrap: anywhere; }
   .project-desc { font-size: 8.5pt; color: #222222; margin-top: 2px; line-height: 1.4; }
   .project-desc li { margin-bottom: 1px; padding-left: 4px; }
 
@@ -193,6 +194,9 @@
         {% if line.strip() %}<div style="padding-left:12px;position:relative;margin-bottom:1px;"><span style="position:absolute;left:0;color:#444;">•</span>{{ line.strip() }}</div>{% endif %}
       {% endfor %}
     </div>
+    {% endif %}
+    {% if p.github_url %}
+    <div class="project-github">GitHub: <a href="{{ p.github_url }}">{{ p.github_url }}</a></div>
     {% endif %}
   </div>
   {% endfor %}
