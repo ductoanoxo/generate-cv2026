@@ -67,6 +67,7 @@ class CVGeneratorService:
                     project["role"] = source.get("role", project["role"])
                     project["description"] = source.get("description", project["description"])
                     project["technologies"] = list(source.get("technologies", []))
+                    project["github_url"] = source.get("github_url") or source.get("githubUrl")
                     if source.get("highlights"):
                         project["highlights"] = source["highlights"]
         return copy.deepcopy(grounded)
@@ -133,6 +134,7 @@ class CVGeneratorService:
                 "description": p.get("description", "Xây dựng ứng dụng hoàn chỉnh đáp ứng yêu cầu thực tế."),
                 "technologies": techs,
                 "highlights": highlights,
+                "github_url": p.get("github_url") or p.get("githubUrl"),
             })
 
         # Build categorized skills from competency profile

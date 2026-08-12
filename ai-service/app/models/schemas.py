@@ -27,6 +27,7 @@ class ProjectSchema(BaseModel):
     role: str = ""
     description: str = ""
     technologies: List[str] = []
+    githubUrl: Optional[str] = None
     startDate: Optional[str] = None
     endDate: Optional[str] = None
 

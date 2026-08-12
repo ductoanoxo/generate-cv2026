@@ -434,6 +434,7 @@ export interface Project {
   role: string;
   description: string;
   technologies: string[];
+  githubUrl?: string;
   startDate?: string; // YYYY-MM
   endDate?: string;   // YYYY-MM; empty/undefined means "now"
 }
@@ -505,4 +506,3 @@ export const defaultCVData: CVData = {
   activities: [],
   grades: []
 };
-

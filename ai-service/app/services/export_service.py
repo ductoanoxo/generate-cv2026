@@ -56,6 +56,13 @@ class ExportService:
         ctx = dict(cv_data)
         
         frontend_categorized = cv_data.get("categorizedSkills") or cv_data.get("categorized_skills")
+        ctx["projects"] = [
+            {
+                **project,
+                "github_url": project.get("github_url") or project.get("githubUrl"),
+            }
+            for project in (cv_data.get("projects") or [])
+        ]
         if frontend_categorized:
             ctx["categorized_skills"] = [
                 {"category": g.get("category"), "items": g.get("items")}
@@ -216,6 +223,13 @@ class ExportService:
                     run = tech_p.add_run("Công nghệ: " + ", ".join(p["technologies"]))
                     run.font.size = Pt(10)
                     run.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+
+                github_url = p.get("github_url") or p.get("githubUrl")
+                if github_url:
+                    github_p = doc.add_paragraph()
+                    run = github_p.add_run("GitHub: " + str(github_url))
+                    run.font.size = Pt(10)
+                    run.font.color.rgb = RGBColor(0x1D, 0x4E, 0xD8)
 
         if experience:
             self._add_docx_heading(doc, "Kinh nghiệm làm việc")
