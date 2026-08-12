@@ -74,15 +74,3 @@ We are an equal opportunity employer committed to fostering a diverse and inclus
 
 Paymentology will never request any form of payment from applicants at any stage of our recruitment process, including for applications, interviews, training or job placements. If anyone asks you for money while claiming to act on behalf of Paymentology, please treat this as fraudulent and do not make any payment. All legitimate Paymentology vacancies are advertised via our official careers page , and our recruitment emails are sent only from official Paymentology domains.
 
-
-
-
-
-
-COMPETENCES
-* Backend & Programming Skills: Java (Core, Spring Boot), Jmix, Vaadin, JavaScript, C++, C#.
-* Databases & Data Management: PostgreSQL, Oracle, MySQL, MongoDB.
-* Domain Knowledge: Core Banking (Thought Machine), Core Banking (Symbols), Foreign Exchange (FX Platform), Financial Accounting (FA), Custody Banking, Anti-Money Laundering (AML) Compliance.
-* DevOps, Tools & Monitoring: Prometheus, Grafana (API Monitoring & Telegram Alerts), GitHub, Draw.io, Figma.
-* Business Skills: Customer Relationship Management (LARK), Enterprise Resource Planning (ODOO).
-* Soft Skills & Methodologies: Agile Scrum, Technical Troubleshooting, Cross-functional Collaboration (with QC/QA & Frontend teams), Clear communication in English.
