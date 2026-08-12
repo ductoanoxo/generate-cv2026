@@ -97,6 +97,17 @@ class JDParserService:
             except Exception as e:
                 logger.error(f"Fallback pdf parse failed: {e}")
 
+            # A PDF is a binary container. Reading it as UTF-8 after extraction
+            # fails produces PDF syntax/metadata as if it were JD content.
+            # Return an empty result so the API/UI can report that this is a
+            # scan without a text layer instead of showing corrupted text.
+            return ""
+
+        if ext in {".doc", ".docx"}:
+            # DOC/DOCX are also binary formats; never decode their bytes as
+            # plain text when the specialized parser cannot read them.
+            return ""
+
         # Plain text fallback
         try:
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
