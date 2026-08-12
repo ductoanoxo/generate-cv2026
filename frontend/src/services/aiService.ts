@@ -5,8 +5,7 @@ const AI_BASE = import.meta.env.VITE_AI_SERVICE_URL || 'http://localhost:8000';
 
 const aiClient = axios.create({
   baseURL: AI_BASE,
-  timeout: 90000,
-  headers: { 'Content-Type': 'application/json' }
+  timeout: 90000
 });
 
 
@@ -204,7 +203,10 @@ export const parseJobDescription = async (rawText: string, file?: File) => {
   const form = new FormData();
   if (file) form.append('file', file);
   else form.append('raw_text', rawText);
-  const response = await aiClient.post<{ status: string; filename: string; markdown: string }>('/api/parse-jd', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+  // Let Axios/browser add the multipart boundary. Setting this header manually
+  // can send `multipart/form-data` without a boundary, so FastAPI cannot read
+  // the uploaded PDF reliably.
+  const response = await aiClient.post<{ status: string; filename: string; markdown: string }>('/api/parse-jd', form);
   return response.data;
 };
 

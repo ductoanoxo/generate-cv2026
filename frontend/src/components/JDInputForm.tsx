@@ -9,6 +9,7 @@ import {
   FilePdf,
   FileDoc
 } from '@phosphor-icons/react';
+import { parseJobDescription } from '../services/aiService';
 
 interface JDInputFormProps {
   onAnalyze: (jdText: string, fileName?: string, file?: File) => void;
@@ -56,14 +57,19 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
 }) => {
   const [jdText, setJdText] = useState<string>(initialText);
   const [uploadedFile, setUploadedFile] = useState<{ name: string; size: number; type: string } | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isParsingFile, setIsParsingFile] = useState<boolean>(false);
+  const [fileParseError, setFileParseError] = useState<string>('');
   const [isDragging, setIsDragging] = useState<boolean>(false);
   const [copiedSample, setCopiedSample] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // File reading helper logic
-  const handleFile = (file: File) => {
+  const handleFile = async (file: File) => {
     if (!file) return;
 
+    setSelectedFile(file);
+    setFileParseError('');
     setUploadedFile({
       name: file.name,
       size: file.size,
@@ -79,28 +85,20 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
       };
       reader.readAsText(file);
     } else {
-      // For PDF / DOCX or binary files, extract plain text strings found in the file stream
-      reader.onload = (e) => {
-        const buffer = e.target?.result as ArrayBuffer;
-        if (buffer) {
-          const decoder = new TextDecoder('utf-8', { fatal: false });
-          const textContent = decoder.decode(buffer);
-          
-          // Clean up printable text blocks from binary format
-          const cleanText = textContent
-            .replace(/[^\x20-\x7E\xA0-\xFF\u0100-\u017F\u0180-\u024F\u1EA0-\u1EF9\n\r\t]/g, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
-
-          if (cleanText.length > 50) {
-            setJdText(cleanText);
-          } else {
-            // Fallback default notification text if binary parsing yields low printable text
-            setJdText(`[Đã nhận file ${file.name}] - Vui lòng kiểm tra và bổ sung mô tả yêu cầu công việc JD nếu cần.`);
-          }
+      // Parse binary files through the AI service immediately so the extracted
+      // content is shown in the textarea instead of exposing ZIP bytes ("PK").
+      setIsParsingFile(true);
+      try {
+        const parsed = await parseJobDescription('', file);
+        setJdText(parsed.markdown || '');
+        if (!parsed.markdown?.trim()) {
+          setFileParseError('Không trích xuất được nội dung từ file. Vui lòng thử file khác hoặc dán JD thủ công.');
         }
-      };
-      reader.readAsArrayBuffer(file);
+      } catch {
+        setFileParseError('Không thể đọc nội dung file. Vui lòng thử lại hoặc dán JD thủ công.');
+      } finally {
+        setIsParsingFile(false);
+      }
     }
   };
 
@@ -135,6 +133,8 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
   const handleSelectSample = (sampleText: string, sampleTitle: string) => {
     setJdText(sampleText);
     setUploadedFile(null);
+    setSelectedFile(null);
+    setFileParseError('');
     setCopiedSample(sampleTitle);
     setTimeout(() => setCopiedSample(null), 2000);
   };
@@ -142,6 +142,8 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
   const handleClear = () => {
     setJdText('');
     setUploadedFile(null);
+    setSelectedFile(null);
+    setFileParseError('');
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -149,8 +151,10 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!jdText.trim()) return;
-    onAnalyze(jdText, uploadedFile?.name, fileInputRef.current?.files?.[0]);
+    if ((!jdText.trim() && !selectedFile) || isParsingFile) return;
+    // Use the text currently visible/edited in the textarea. Only retry with
+    // the original file when parsing did not produce any text.
+    onAnalyze(jdText, uploadedFile?.name, jdText.trim() ? undefined : selectedFile || undefined);
   };
 
   const getFileIcon = (fileName: string) => {
@@ -182,7 +186,7 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
             Kéo thả tệp PDF/DOCX hoặc dán nội dung JD để hệ thống AI tự động khớp môn học & điểm số thực tế từ cơ sở dữ liệu.
           </p>
         </div>
-        {jdText && (
+        {(jdText || fileParseError) && (
           <button 
             type="button"
             className="btn-icon-text"
@@ -271,6 +275,8 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   setUploadedFile(null);
+                  setSelectedFile(null);
+                  setFileParseError('');
                 }}
                 style={{ background: 'none', border: 'none', color: '#EF4444', marginLeft: '12px', cursor: 'pointer' }}
                 title="Đổi tệp khác"
@@ -322,21 +328,31 @@ export const JDInputForm: React.FC<JDInputFormProps> = ({
               padding: '12px'
             }}
           />
+          {isParsingFile && (
+            <div role="status" style={{ color: '#94A3B8', fontSize: '0.78rem', marginTop: '6px' }}>
+              Đang đọc nội dung từ {uploadedFile?.name}...
+            </div>
+          )}
+          {fileParseError && (
+            <div role="alert" style={{ color: '#F87171', fontSize: '0.78rem', marginTop: '6px' }}>
+              {fileParseError}
+            </div>
+          )}
         </div>
 
         {/* Submit button */}
         <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
           <button
             type="submit"
-            disabled={!jdText.trim() || isLoading}
+            disabled={(!jdText.trim() && !selectedFile) || isLoading || isParsingFile}
             className="btn-icon-text primary"
             style={{
               padding: '12px 24px',
               fontSize: '0.95rem',
               fontWeight: 700,
               borderRadius: '8px',
-              cursor: !jdText.trim() || isLoading ? 'not-allowed' : 'pointer',
-              opacity: !jdText.trim() || isLoading ? 0.6 : 1,
+              cursor: (!jdText.trim() && !selectedFile) || isLoading || isParsingFile ? 'not-allowed' : 'pointer',
+              opacity: (!jdText.trim() && !selectedFile) || isLoading || isParsingFile ? 0.6 : 1,
               background: 'linear-gradient(135deg, #22C55E 0%, #16A34A 100%)',
               boxShadow: '0 4px 14px rgba(34, 197, 94, 0.3)'
             }}
