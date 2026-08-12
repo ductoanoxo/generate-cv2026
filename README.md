@@ -1,168 +1,498 @@
-# 📄 generateCV
+# generateCV — Tây Đô College Portal & AI CV Builder
 
-Dự án **generateCV** là hệ thống hỗ trợ quản lý và tự động tạo CV chuyên nghiệp cho sinh viên Trường Cao Đẳng Tây Đô dựa trên thông tin cá nhân và kết quả học tập thực tế. Trong đó, hệ thống cổng thông tin trực quan hóa dữ liệu (Dashboard) dành cho quản trị viên, trưởng khoa, trưởng bộ môn, giảng viên và sinh viên chỉ đóng vai trò là một phần tích hợp của hệ thống tổng thể này.
+generateCV là hệ thống cổng thông tin dành cho Trường Cao đẳng Tây Đô, kết hợp dashboard quản lý dữ liệu học tập với công cụ phân tích Job Description và tạo CV bằng AI.
 
----
+Hệ thống lấy dữ liệu học tập từ PostgreSQL/Supabase, cung cấp dashboard theo vai trò người dùng và hỗ trợ sinh viên tạo CV dựa trên hồ sơ, điểm số, môn học/CLO, dự án và kinh nghiệm thực tập.
 
-## 🏗️ Kiến Trúc Hệ Thống (Architecture)
+## Tính năng chính
 
-Dự án được xây dựng dưới dạng ứng dụng full-stack hoàn chỉnh chia thành hai phần độc lập:
+### Cổng thông tin học tập
 
-- **Frontend (`/frontend`)**: 
-  - Khởi chạy bằng **React + Vite + TypeScript**.
-  - Trực quan hóa dữ liệu với **Recharts**, icons đồng bộ từ **Phosphor Icons**.
-  - Thiết kế theo chuẩn giao diện tối (Dark mode) sang trọng, áp dụng font chữ **Inter**.
-- **Backend (`/backend`)**:
-  - Xây dựng trên nền **.NET 8 Web API**, sử dụng **Entity Framework Core**.
-  - Kết nối trực tiếp tới cơ sở dữ liệu **Supabase PostgreSQL**.
-  - Chế độ hoạt động: 🔒 **Read-Only** (Chỉ đọc & thống kê dữ liệu, không ghi đè, ngoại trừ login).
-- **Môi trường chạy**: Container hóa toàn bộ bằng **Docker Compose** hỗ trợ cơ chế **Hot-Reload** tức thì.
+- Đăng nhập và xác thực bằng JWT.
+- Phân quyền theo vai trò: quản trị viên, trưởng khoa, trưởng bộ môn, giảng viên và sinh viên.
+- Dashboard tổng quan cho từng nhóm người dùng.
+- Theo dõi thời khóa biểu sinh viên, giảng viên và khoa.
+- Tra cứu điểm, điểm theo học kỳ, thống kê điểm danh và thông báo.
+- Dashboard quản trị: KPI, danh sách sinh viên/giảng viên, thiết bị, audit log và cài đặt.
+- Dashboard khoa/bộ môn: tiến độ giảng dạy, giáo viên, câu hỏi/đề thi và thống kê chuyên cần.
+- Dashboard giảng viên: lớp học, thống kê, cảnh báo sinh viên và bộ câu hỏi.
 
----
+### CV Builder cho sinh viên
 
-## 📁 Cấu Trúc Thư Mục
+- Tự động điền thông tin sinh viên và kết quả học tập từ backend.
+- Nhập và phân tích JD từ text hoặc file PDF/DOCX/TXT.
+- Tìm kiếm môn học và CLO phù hợp với JD bằng semantic vector search.
+- Xây dựng competency profile từ thông tin sinh viên, môn học, điểm số và dự án.
+- Tạo CV theo dữ liệu đã chọn bằng LLM.
+- Tối ưu CV theo ATS và hiển thị phần đề xuất thay đổi.
+- Kiểm tra evidence của kỹ năng/dự án trước khi đưa vào CV.
+- Live preview CV khổ A4, hỗ trợ template modern/classic.
+- Lưu và tải lại CV.
+- Dịch CV.
+- Xuất CV PDF.
+- Tạo phiếu thực tập Mẫu 07 dạng DOCX.
+- Sinh viên tải phiếu đã ký lên để giáo viên/trưởng bộ môn/trưởng khoa duyệt hoặc từ chối.
 
-```
+## Kiến trúc hệ thống
+
+~~~text
+                         ┌──────────────────────┐
+                         │  React + Vite         │
+                         │  Frontend :3000       │
+                         └──────────┬───────────┘
+                                    │
+                 ┌──────────────────┴──────────────────┐
+                 │                                     │
+                 ▼                                     ▼
+       ┌──────────────────────┐             ┌──────────────────────┐
+       │ .NET 8 Web API       │             │ FastAPI AI Service    │
+       │ Backend :5000        │             │ AI Service :8000      │
+       └──────────┬───────────┘             └──────────┬───────────┘
+                  │                                    │
+                  ▼                                    ▼
+       ┌──────────────────────┐             ┌──────────────────────┐
+       │ Supabase PostgreSQL  │             │ Qdrant Vector DB      │
+       │ Dữ liệu portal       │             │ course_clos collection │
+       └──────────────────────┘             └──────────────────────┘
+~~~
+
+Project gồm bốn container trong Docker Compose:
+
+| Service | Công nghệ | Port | Vai trò |
+| --- | --- | ---: | --- |
+| frontend | React 19, Vite, TypeScript | 3000 | Giao diện người dùng |
+| backend | .NET 8, ASP.NET Core, EF Core | 5000 | Auth, dashboard, dữ liệu portal |
+| ai-service | Python 3.11, FastAPI | 8000 | Phân tích JD, vector search, sinh/tối ưu CV |
+| qdrant | Qdrant | 6333 | Vector database local tùy chọn |
+
+Backend kết nối Supabase PostgreSQL. AI Service dùng OpenAI Embedding, Qdrant, tùy chọn Cohere/Gemini/GitHub và các service xử lý PDF/DOCX. Khi AI container khởi động, scripts/seed_vectors.py sẽ cố gắng nạp dữ liệu môn học/CLO vào collection course_clos.
+
+## Công nghệ sử dụng
+
+### Frontend
+
+- React, TypeScript, Vite.
+- React Router cho routing và protected routes.
+- Axios cho gọi API.
+- Supabase JS client.
+- Recharts cho biểu đồ.
+- Phosphor Icons.
+- html2pdf.js làm phương án xuất PDF dự phòng phía trình duyệt.
+
+### Backend
+
+- .NET 8 Web API.
+- Entity Framework Core và Npgsql.
+- Supabase PostgreSQL.
+- JWT Bearer Authentication.
+- Swagger/OpenAPI.
+- Middleware phân quyền theo role.
+
+### AI Service
+
+- FastAPI và Uvicorn.
+- Pydantic Settings.
+- LangGraph/LangChain cho pipeline CV.
+- OpenAI Embeddings.
+- Qdrant semantic search.
+- Cohere Rerank tùy chọn.
+- Gemini tùy chọn cho sinh/tối ưu CV.
+- pypdf, BeautifulSoup, lxml và các fallback nhẹ cho đọc tài liệu.
+- WeasyPrint, python-docx và Jinja2 cho xuất PDF/DOCX.
+
+## Cấu trúc thư mục
+
+~~~text
 generate-cv/
-├── backend/                  # Mã nguồn Backend .NET 8 Web API
-│   ├── Controllers/          # Các endpoint API phân quyền theo Role
-│   ├── Data/                 # Cấu hình DbContext & Database Entities
-│   ├── Services/             # Logic nghiệp vụ (Auth, Admin, Student, Teacher...)
-│   ├── Middleware/           # Bộ lọc xác thực quyền truy cập Role claim từ JWT
-│   └── Dockerfile            # Multi-stage build chạy Hot-Reload qua dotnet watch
-│
-├── frontend/                 # Giao diện Frontend React + Vite
-│   ├── src/
-│   │   ├── components/       # Giao diện khung (Layout, Protected Routes)
-│   │   ├── context/          # Quản lý phiên đăng nhập (Auth Context)
-│   │   ├── mock/             # Dữ liệu giả lập (mockData) khớp 100% database thật
-│   │   ├── pages/            # Các trang dashboard theo Role & CV Builder
-│   │   ├── App.tsx           # Định tuyến ứng dụng React Router v6
-│   │   └── index.css         # Design system & biến cấu trúc CSS (font Inter)
-│   ├── nginx.conf            # Cấu hình SPA routing cho Docker production
-│   └── Dockerfile            # Dockerfile chạy dev server có auto-reload
-│
-├── docs/                     # Tài liệu thiết kế & phân chia công việc
-│   ├── dashboard_master_plan.md
-│   └── work_division.md
-│
-├── .agents/                  # Cấu hình hoạt động của AI Agents
-│   └── rules/
-│       └── project_rules.md  # Quy tắc phát triển (UI/UX, Read-Only, Docker...)
-│
-└── docker-compose.yml        # Tệp quản lý kích hoạt đồng thời 2 dịch vụ
-```
+├── backend/                         # .NET 8 Web API
+│   ├── Controllers/                 # API theo module/role
+│   ├── Data/Entities/               # Entity và AppDbContext
+│   ├── DTOs/                        # DTO cho student/teacher
+│   ├── Middleware/                  # RoleAuthorizationMiddleware
+│   ├── Services/                    # Auth, dashboard, schedule, report...
+│   ├── Program.cs                   # DI, DB, JWT, CORS, Swagger, seed
+│   ├── appsettings.json             # Cấu hình backend mẫu
+│   └── Dockerfile
+├── backend.Tests/                   # Unit tests cho backend
+├── frontend/                        # React + Vite frontend
+│   ├── src/components/              # Layout, forms, preview, charts
+│   ├── src/context/                 # AuthContext
+│   ├── src/pages/                   # Trang theo từng role
+│   ├── src/services/                # Backend/AI/internship API clients
+│   ├── src/utils/                   # Validation và Supabase client
+│   └── Dockerfile
+├── ai-service/                      # FastAPI AI service
+│   ├── app/routers/                 # Health, JD, embedding, search, CV, export
+│   ├── app/services/                # Parser, embedding, search, generator...
+│   ├── app/models/                  # Pydantic schemas và prompts
+│   ├── app/templates/               # HTML/DOCX templates
+│   ├── scripts/                     # Seed/reseed vector và tạo tài liệu CLO
+│   ├── requirements.txt
+│   └── Dockerfile
+├── CLO/                             # Tài liệu chương trình đào tạo/CLO
+├── docs/                            # Thiết kế, kế hoạch, phân tích và hướng dẫn
+├── docker-compose.yml               # Chạy toàn bộ stack
+├── .env.example                     # Biến môi trường tổng
+└── README.md
+~~~
 
----
+## Yêu cầu môi trường
 
-## 🔌 Danh Sách API Endpoints Đã Triển Khai (Implemented Endpoints)
+### Chạy bằng Docker Compose — khuyến nghị
 
-Hệ thống cung cấp các API RESTful phục vụ cho các trang Dashboard hiển thị dữ liệu thực tế từ cơ sở dữ liệu Supabase:
+- Docker Desktop hoặc Docker Engine.
+- Docker Compose v2 (docker compose).
+- Quyền truy cập Supabase PostgreSQL.
+- API key cho các tính năng AI tương ứng.
 
-### 📊 Admin Dashboard API (Role 99)
-- **`GET /api/admin/dashboard`**: Truy vấn số liệu KPIs (Tổng sinh viên, giảng viên, khoa, môn học), phân bố sinh viên theo Khoa/Khóa, thống kê & xu hướng điểm danh theo tháng, và phân bố phổ điểm thi toàn trường.
-- **`GET /api/admin/audit-logs`**: Lấy nhật ký hoạt động hệ thống gần đây (phục vụ bảng activity log).
-- **`GET /api/admin/devices`**: Thống kê thiết bị đã đăng ký (Desktop, Mobile, Tablet) phục vụ biểu đồ donut.
-- **`GET /api/admin/settings`**: Xem các thiết lập cấu hình hệ thống (năm học, học kỳ, tích hợp...).
+### Chạy thủ công
 
-### 📅 Schedule API (Thời Khóa Biểu)
-- **`GET /api/schedule/today`**: Lấy lịch học/dạy hôm nay của người dùng dựa trên `userId` và `role` (hỗ trợ tự động nhận diện từ claims của token JWT hoặc từ query parameters).
-- **`GET /api/schedule/by-week`**: Lấy lịch học/dạy của cả tuần (Thứ 2 - Chủ nhật) chứa ngày được yêu cầu.
-- **`GET /api/schedule/student/{id}`**: Lấy toàn bộ thời khóa biểu của sinh viên theo ID.
-- **`GET /api/schedule/teacher/{id}`**: Lấy thời khóa biểu giảng dạy của giảng viên (tùy chọn filter theo `semesterId`).
-- **`GET /api/schedule/semesters`**: Lấy danh sách các học kỳ có trong hệ thống.
+- .NET 8 SDK.
+- Node.js 22 trở lên, npm.
+- Python 3.11 trở lên.
+- Một Qdrant local hoặc Qdrant Cloud.
 
----
+## Cấu hình biến môi trường
 
-## 🔐 Phân Quyền Hệ Thống & Tài Khoản Thử Nghiệm
+Không commit file .env thật lên Git. Repository chỉ chứa các file mẫu.
 
-Hệ thống phân quyền dựa trên trường dữ liệu `Role` (số nguyên) trong bảng `Users`. Trang đăng nhập tích hợp sẵn tính năng nhấn chọn nhanh để kiểm thử các Role sau:
+### 1. File .env ở thư mục gốc
 
-| Tài khoản | Họ và Tên | Quyền (Role) | Chức năng chính |
-| :--- | :--- | :--- | :--- |
-| **admin** | Nguyễn Văn Quản Trị | 99 (Admin) | Thống kê toàn trường, quản lý thiết bị, cấu hình, audit logs |
-| **deankhoa** | TS. Trần Minh Khoa | 50 (Trưởng Khoa) | Tiến độ học kỳ khoa, chuyên cần HP, trung bình môn, đánh giá GV |
-| **tbm_cntt** | ThS. Nguyễn Thị Trưởng | 20 (Trưởng Bộ Môn) | Tiến độ dạy môn học, đề thi bộ môn, so sánh điểm thi các lớp |
-| **gv_nam** | ThS. Lê Hoàng Nam | 10 (Giáo Viên) | Thời khóa biểu giảng dạy, sĩ số lớp, cảnh báo học viên vắng nhiều |
-| **sv_toan** | Đặng Đức Toàn | 1 (Sinh Viên) | Dashboard cá nhân, thời khóa biểu học, bảng điểm, **Tạo CV ứng tuyển** |
+Tại thư mục có docker-compose.yml:
 
----
+~~~bash
+cp .env.example .env
+~~~
 
-## 📄 Công Cụ Tạo CV Tự Động (CV Builder)
+Điền các biến:
 
-Nằm tại tuyến đường `/student/cv` dành riêng cho sinh viên:
-- **Tự động điền (Autofill)**: Thông tin cá nhân (MSSV, ngành, khoa) và kết quả thi được lấy trực tiếp từ cơ sở dữ liệu, đảm bảo tính chính xác và được hệ thống xác thực.
-- **Live Preview**: Xem trước CV theo định dạng A4 chuẩn thời gian thực song song với khung soạn thảo.
-- **ATS & Validation**: Chấm điểm theo từ khóa JD và kiểm tra độ đầy đủ CV theo thời gian thực bằng `ATSScoreBadge.tsx` và `ValidationReport.tsx`.
-- **Tùy chỉnh linh hoạt**: Sinh viên tự nhập thêm giới thiệu bản thân, kỹ năng, dự án thực tế và các hoạt động ngoại khóa.
-- **JD Pipeline**: Upload PDF/DOCX/TXT được gửi tới AI service `/api/parse-jd`; frontend có fallback local khi AI service chưa chạy.
-- **Xuất bản**: Ưu tiên AI service `/api/export/pdf`, sau đó fallback sang `html2pdf.js` và `window.print()`.
+~~~env
+DATABASE_URL=Host=...;Port=5432;Database=postgres;Username=...;Password=...;SSL Mode=Require
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+~~~
 
-### ✅ Kiểm thử nhanh Ngày 10
+DATABASE_URL được Docker Compose truyền vào backend dưới tên ConnectionStrings__DefaultConnection. Hai biến VITE_* được truyền vào frontend.
 
-```bash
-cd frontend && npm run build
-dotnet test backend.Tests/backend.Tests.csproj
-cd ai-service && pip install -r requirements.txt && pytest -q
-docker compose config --quiet
-```
+### 2. File ai-service/.env
 
----
+~~~bash
+cp ai-service/.env.example ai-service/.env
+~~~
 
-## 🚀 Hướng Dẫn Kích Hoạt & Cài Đặt
+Các biến thường dùng:
 
-### Cách 1: Khởi chạy nhanh bằng Docker Compose (Khuyên Dùng - Có Hot-Reload)
+~~~env
+APP_NAME=GenerateCV-AIService
+APP_ENV=development
+PORT=8000
 
-Yêu cầu máy tính đã cài đặt **Docker** và **Docker Compose**. Tại thư mục gốc của dự án, chạy lệnh:
+# Dùng Qdrant local trong Docker Compose
+QDRANT_URL=http://qdrant:6333
+QDRANT_API_KEY=
 
-```bash
-# Khởi động và build các dịch vụ chạy ngầm
-docker compose up -d --build
-```
+# Dùng cho embedding
+OPENAI_API_KEY=your-openai-key
 
-Sau khi các container khởi chạy thành công:
-- **Frontend** sẽ mở tại: `http://localhost:3000` (Tự động hot-reload khi sửa code ở thư mục `/frontend`).
-- **Backend API** sẽ mở tại: `http://localhost:5000` (Tự động hot-reload qua `dotnet watch` khi sửa code ở thư mục `/backend`).
+# Tùy chọn: sinh/tối ưu CV và tóm tắt project bằng Gemini
+GEMINI_API_KEY=your-gemini-key
+LLM_MODEL=gemini-2.5-flash
 
-*Các lệnh Docker hữu ích:*
-```bash
-# Xem nhật ký logs
+# Tùy chọn: rerank kết quả tìm kiếm
+COHERE_API_KEY=your-cohere-key
+
+# Tùy chọn: tăng rate limit khi đọc GitHub
+GITHUB_TOKEN=your-github-token
+
+# Tùy chọn cho các script đồng bộ dữ liệu
+DATABASE_URL=Host=...;Port=5432;Database=postgres;Username=...;Password=...;SSL Mode=Require
+~~~
+
+Nếu dùng Qdrant Cloud, thay QDRANT_URL bằng URL cloud và điền QDRANT_API_KEY. Nếu chạy local không qua Docker, dùng QDRANT_URL=http://localhost:6333.
+
+### 3. File frontend/.env khi chạy frontend riêng
+
+Khi chạy frontend bằng Docker Compose, không cần tạo file này vì Compose lấy biến từ .env tổng. Khi chạy frontend thủ công:
+
+~~~bash
+cp frontend/.env.example frontend/.env
+~~~
+
+Có thể thêm URL backend/AI nếu không dùng giá trị mặc định:
+
+~~~env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
+VITE_BACKEND_URL=http://localhost:5126
+VITE_AI_SERVICE_URL=http://localhost:8000
+~~~
+
+Frontend mặc định gọi backend tại http://localhost:5000 và AI Service tại http://localhost:8000. Biến VITE_BACKEND_URL hiện được dùng bởi client internship verification; nhiều page dashboard vẫn dùng URL backend http://localhost:5000 trực tiếp.
+
+## Chạy toàn bộ bằng Docker Compose
+
+### 1. Mở thư mục chính
+
+~~~bash
+cd generate-cv
+~~~
+
+Đây phải là thư mục chứa docker-compose.yml.
+
+### 2. Tạo và điền các file môi trường
+
+~~~bash
+cp .env.example .env
+cp ai-service/.env.example ai-service/.env
+~~~
+
+Điền secret/API key theo phần Cấu hình biến môi trường.
+
+### 3. Build image
+
+~~~bash
+docker compose build
+~~~
+
+### 4. Khởi động service
+
+Chạy foreground để xem log:
+
+~~~bash
+docker compose up
+~~~
+
+Hoặc chạy background:
+
+~~~bash
+docker compose up -d
+~~~
+
+### 5. Truy cập hệ thống
+
+- Frontend: http://localhost:3000
+- Backend Swagger: http://localhost:5000/swagger
+- AI Service Swagger: http://localhost:8000/docs
+- AI Service ReDoc: http://localhost:8000/redoc
+- AI Service health: http://localhost:8000/health
+- Qdrant dashboard/API local: http://localhost:6333
+
+### Lệnh Docker hữu ích
+
+~~~bash
+# Xem log tất cả service
 docker compose logs -f
 
-# Tắt các container
+# Xem log một service
+docker compose logs -f ai-service
+
+# Kiểm tra file Compose và biến đã được resolve
+docker compose config --quiet
+
+# Xem trạng thái container
+docker compose ps
+
+# Dừng container
 docker compose down
-```
 
-### ⚙️ Cấu hình Biến Môi Trường (.env)
+# Dừng và xóa volume Qdrant (sẽ xóa dữ liệu vector local)
+docker compose down -v
+~~~
 
-Hệ thống hiện tại hỗ trợ cấu hình kết nối database thông qua file `.env` ở thư mục gốc của dự án. 
+## Chạy thủ công từng service
 
-1. Sao chép file `.env.example` thành `.env`:
-   ```bash
-   cp .env.example .env
-   ```
-2. Cập nhật các thông số kết nối trong file `.env`:
-   - `DATABASE_URL`: Chuỗi kết nối PostgreSQL đến Supabase (dành cho Backend).
-   - `VITE_SUPABASE_URL` và `VITE_SUPABASE_ANON_KEY`: Địa chỉ URL và mã Anon Key của Supabase (dành cho Frontend).
+### Backend .NET
 
-### Cách 2: Khởi chạy thủ công (Local Development)
-
-#### 1. Chạy Backend .NET 8:
-Yêu cầu đã cài đặt .NET 8 SDK.
-```bash
+~~~bash
 cd backend
-# Chuỗi kết nối mặc định được đọc từ file appsettings.json nếu chạy trực tiếp.
-# Nếu chạy qua Docker, chuỗi kết nối sẽ được ghi đè bằng biến DATABASE_URL trong file .env.
-dotnet run
-```
-API sẽ hoạt động tại `http://localhost:5000` (hoặc cổng cấu hình trong launchSettings.json).
+dotnet restore
+ASPNETCORE_URLS=http://localhost:5000 dotnet run --no-launch-profile
+~~~
 
-#### 2. Chạy Frontend React:
-Yêu cầu đã cài đặt Node.js (phiên bản v18 trở lên).
-```bash
+Frontend hiện gọi backend tại http://localhost:5000 ở nhiều màn hình, nên khi chạy thủ công nên dùng lệnh trên. Nếu chạy theo profile http mặc định, backend sẽ ở http://localhost:5126 và Swagger ở http://localhost:5126/swagger; khi đó cần cập nhật các URL backend trong frontend tương ứng. Khi chạy trong Docker, cổng container 8080 được map ra http://localhost:5000.
+
+Backend đọc ConnectionStrings:DefaultConnection từ appsettings.json; biến môi trường có tên ConnectionStrings__DefaultConnection sẽ override cấu hình này.
+
+### Frontend React
+
+~~~bash
 cd frontend
-# Tạo file .env tương tự như ở thư mục gốc nếu muốn chạy local không qua Docker
-npm install
+cp .env.example .env
+npm ci
 npm run dev
-```
-Ứng dụng khách sẽ hoạt động tại `http://localhost:5173`.
+~~~
+
+Frontend chạy tại http://localhost:5173.
+
+Các lệnh kiểm tra:
+
+~~~bash
+npm run build
+npm run lint
+npm run preview
+~~~
+
+### AI Service
+
+~~~bash
+cd ai-service
+python -m venv .venv
+source .venv/bin/activate       # macOS/Linux
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+
+pip install -r requirements.txt
+cp .env.example .env
+~~~
+
+Nếu Qdrant đã chạy tại localhost:6333, có thể seed vector trước:
+
+~~~bash
+python scripts/seed_vectors.py
+~~~
+
+Khởi động API:
+
+~~~bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+~~~
+
+## Frontend routes
+
+| Route | Role | Chức năng |
+| --- | --- | --- |
+| /login | Public | Đăng nhập |
+| /admin | 99 | Admin dashboard |
+| /admin/logs | 99 | Audit logs |
+| /admin/devices | 99 | Thiết bị |
+| /admin/settings | 99 | Cài đặt |
+| /admin/teachers | 99 | Danh sách giảng viên |
+| /admin/students | 99 | Danh sách sinh viên |
+| /faculty | 50 | Dashboard khoa |
+| /faculty/teachers | 50 | Giảng viên trong khoa |
+| /faculty/attendance | 50 | Thống kê chuyên cần |
+| /department | 20 | Dashboard bộ môn |
+| /department/progress | 20 | Tiến độ giảng dạy |
+| /department/questions | 20 | Bộ câu hỏi |
+| /teacher | 10 | Dashboard giảng viên |
+| /teacher/schedule | 10 | Thời khóa biểu |
+| /teacher/exams | 10 | Dữ liệu/bộ đề thi |
+| /teacher/internship-verifications | 10, 20, 50 | Duyệt thực tập/Mẫu 07 |
+| /student | 1 | Dashboard sinh viên |
+| /student/announcements | 1 | Thông báo |
+| /student/scores | 1 | Điểm |
+| /student/schedule | 1 | Thời khóa biểu |
+| /student/cv | 1 | CV Builder |
+| /student/jd-match | 1 | Phân tích JD và matching |
+
+## Backend API chính
+
+Base URL Docker: http://localhost:5000.
+
+| Nhóm | Endpoint |
+| --- | --- |
+| Auth | POST /api/auth/login, GET /api/auth/me |
+| Admin | GET /api/admin/dashboard, /audit-logs, /devices, /devices/list, /settings, /teachers, /students |
+| Faculty | GET /api/faculty/dashboard, /teachers |
+| Department | GET /api/department/dashboard, /questions |
+| Teacher | GET /api/teacher/dashboard, /question-suites |
+| Student | GET /api/student/dashboard, /announcements, /scores, /{id}/scores/filtered |
+| Schedule | GET /api/schedule/student/{id}, /teacher/{id}, /faculty/{id}, /semesters |
+| Attendance | GET /api/attendance/heatmap/{classId}, /recent |
+| Reports | GET /api/reports/cv-data/{studentId}, /attendance/export, /exams/export |
+| Saved CV | GET/POST /api/saved-cvs, GET /api/saved-cvs/{id} |
+| Internship | GET /api/internship-verifications/mine, GET /pending, POST /, GET /{id}/file, POST /{id}/approve, POST /{id}/reject |
+
+Các endpoint cần xác thực dùng JWT Bearer token. Chi tiết request/response có trong Swagger.
+
+## AI Service API chính
+
+Base URL: http://localhost:8000.
+
+| Nhóm | Endpoint | Mục đích |
+| --- | --- | --- |
+| Health | GET /, GET /health | Kiểm tra service và Qdrant |
+| JD Parser | POST /api/parse-jd | Đọc JD từ text hoặc file |
+| Embedding | POST /api/embed | Tạo embedding |
+| Search | POST /api/search | Semantic search môn học/CLO, tùy chọn Cohere rerank |
+| GitHub | POST /api/scrape-github | Đọc repo, README, file tree và tóm tắt project |
+| Competency | POST /api/competency-profile | Tạo hồ sơ năng lực |
+| CV | POST /api/generate-cv | Sinh CV từ competency profile |
+| Pipeline | POST /api/generate-cv/full | Chạy pipeline competency → CV → ATS → validation |
+| ATS | POST /api/optimize-ats, /api/auto-optimize | Tối ưu CV theo JD |
+| Validation | POST /api/validate-evidence | Kiểm tra claim dựa trên evidence |
+| Export | POST /api/export/pdf, /api/export/mau07 | Xuất PDF hoặc Mẫu 07 DOCX |
+| Translation | POST /api/translate/cv | Dịch dữ liệu CV |
+
+Swagger AI Service tại http://localhost:8000/docs hiển thị schema request/response đầy đủ.
+
+## Luồng tạo CV
+
+~~~text
+Nhập/upload JD
+        ↓
+Parse JD và trích xuất kỹ năng
+        ↓
+Embedding + tìm môn học/CLO trong Qdrant
+        ↓
+Sinh competency profile
+        ↓
+Kết hợp hồ sơ sinh viên, điểm, project và kinh nghiệm
+        ↓
+Sinh CV bằng LLM
+        ↓
+ATS optimize + validate evidence
+        ↓
+Review, lưu CV, dịch hoặc xuất PDF/DOCX
+~~~
+
+Frontend có fallback cục bộ cho một số thao tác khi AI Service chưa sẵn sàng, nhưng các chức năng semantic search, sinh CV, xuất Mẫu 07 và một số thao tác tối ưu cần AI Service hoạt động.
+
+## Dữ liệu và quyền truy cập
+
+Các role đang được sử dụng trong frontend/backend:
+
+| Role | Nhóm |
+| ---: | --- |
+| 99 | Admin |
+| 50 | Trưởng khoa |
+| 20 | Trưởng bộ môn |
+| 10 | Giảng viên |
+| 1 | Sinh viên |
+
+Backend có DbSeeder cho dữ liệu phát triển. Dữ liệu nghiệp vụ chính nằm trong Supabase PostgreSQL, còn tài liệu chương trình đào tạo/CLO được lưu trong thư mục CLO và được dùng bởi các script seed vector.
+
+Không nên coi môi trường hiện tại là production-ready nếu chưa thay JWT secret mặc định, giới hạn CORS, bảo vệ Swagger và quản lý secret bằng secret manager.
+
+## Kiểm tra trước khi bàn giao
+
+~~~bash
+# Kiểm tra Compose
+docker compose config --quiet
+
+# Frontend
+npm --prefix frontend run build
+npm --prefix frontend run lint
+
+# Backend
+dotnet test backend.Tests/backend.Tests.csproj
+
+# AI Service (khi checkout có test suite)
+python -m pytest -q ai-service
+~~~
+
+## Tài liệu liên quan
+
+- docs/full-cv-pipeline-integration.md: tích hợp pipeline CV.
+- docs/generate_cv_plan.md: kế hoạch phát triển CV Builder.
+- docs/dashboard_master_plan.md: kế hoạch dashboard.
+- docs/mo_ta_chuc_nang_theo_role.md: mô tả chức năng theo role.
+- docs/database_index_plan.md: kế hoạch index database.
+- docs/swagger.json: tài liệu API được lưu trong repository.
+
+## Bảo mật
+
+- Không commit .env, API key, password DB hoặc token GitHub.
+- Chỉ chia sẻ các file .env.example khi bàn giao source.
+- Nếu secret đã từng bị push lên remote, cần revoke/rotate ngay cả khi đã xóa file.
+- Khi deploy thật, thay JWT secret mặc định và cấu hình CORS theo domain cụ thể.
+- Qdrant local không nên expose trực tiếp ra Internet nếu không có authentication.
